@@ -150,6 +150,8 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
 .overtime-card.active .section-title{color:var(--green)}
+.total-earned-row{margin-top:9px;padding-top:9px;border-top:1px solid #263139;font-weight:750}
+.total-earned-row span:last-child{font-size:16px;color:var(--green);font-variant-numeric:tabular-nums}
 .history-item{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:13px;margin-top:9px}
 .history-item:first-child{margin-top:0}
 .history-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -223,6 +225,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <div class="row"><span>Фактическое списание</span><span id="signoffStatus">--</span></div>
   <div class="row"><span>Прошло оплачиваемого времени</span><span id="elapsed">0 дн. 00:00:00</span></div>
   <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
+  <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="contractTotalEarned">$0.00</span></div>
  </div>
 </div>
 
@@ -257,14 +260,6 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="row" style="margin-top:10px"><span>В день</span><span id="overtimeDay">$0.00</span></div>
  <div class="row"><span>В час</span><span id="overtimeHour">$0.00</span></div>
 </div>
-
-<div class="card">
- <div class="section-title">TOTAL EARNED</div>
- <div class="bigbox"><div class="small">Контракт + переработка</div><b id="totalEarned">$0.00</b></div>
- <div class="row" style="margin-top:10px"><span>Контракт</span><span id="totalContract">$0.00</span></div>
- <div class="row"><span>Overtime</span><span id="totalOvertime">$0.00</span></div>
-</div>
-
 
 <div class="card" id="allTimeCard">
  <div class="section-title">ALL-TIME EARNINGS</div>
@@ -647,6 +642,7 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("progressText").textContent=pct.toFixed(1)+"%";
   $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
+ $("contractTotalEarned").textContent=fmtUSD(totalPaidContract(start,end,salary)+overtimeEarned);
  }
  $("totalContract").textContent=fmtUSD(start&&end?totalPaidContract(start,end,salary):0);
  $("totalOvertime").textContent=fmtUSD(overtimeEarned);
