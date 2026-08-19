@@ -266,6 +266,18 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 </div>
 
 
+<div class="card" id="allTimeCard">
+ <div class="section-title">ALL-TIME EARNINGS</div>
+ <div class="bigbox">
+  <div class="small">За все завершённые контракты</div>
+  <b id="allTimeTotal">$0.00</b>
+ </div>
+ <div class="row" style="margin-top:10px"><span>Контракт</span><span id="allTimeContract">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="allTimeOvertime">$0.00</span></div>
+ <div class="row"><span>Контрактов</span><span id="allTimeContracts">0</span></div>
+ <div class="row"><span>Средний контракт</span><span id="allTimeAverage">$0.00</span></div>
+</div>
+
 <div class="card" id="historyCard">
  <div class="section-title">CONTRACT HISTORY</div>
  <div id="historyList">
@@ -500,8 +512,23 @@ function getHistory(){
 function saveHistory(history){
  localStorage.setItem("salaryTrackerHistory",JSON.stringify(history));
 }
+
+function renderAllTime(){
+ const history=getHistory();
+ const contract=history.reduce((s,x)=>s+(Number(x.contract)||0),0);
+ const overtime=history.reduce((s,x)=>s+(Number(x.overtime)||0),0);
+ const total=contract+overtime;
+ const count=history.length;
+ $("allTimeTotal").textContent=fmtUSD(total);
+ $("allTimeContract").textContent=fmtUSD(contract);
+ $("allTimeOvertime").textContent=fmtUSD(overtime);
+ $("allTimeContracts").textContent=count;
+ $("allTimeAverage").textContent=fmtUSD(count?total/count:0);
+}
+
 function renderHistory(){
  const history=getHistory();
+ renderAllTime();
  const list=$("historyList");
  $("historyCount").textContent=history.length;
  const total=history.reduce((sum,x)=>sum+(Number(x.total)||0),0);
