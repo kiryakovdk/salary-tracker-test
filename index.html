@@ -748,7 +748,7 @@ function update(){
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=paidAmountBetween(start,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary);
- buildSalaryChart(start,end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
+ try{buildSalaryChart(start,end,signoff,now,salary);}catch(e){} archiveCompletedContract(start,end,signoff,salary);
 
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
@@ -808,14 +808,14 @@ function updateSleep(perSec){
  if(b<=a)b.setDate(b.getDate()+1);
  let sec=paidBetween(a,b);$("sleepEarn").textContent=fmtUSD(sec*perSec);
 }
-["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
+["salary","start","end","signoff","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
-load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
+load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 let salaryChartResizeHandler;
 window.addEventListener("resize",()=>{clearTimeout(salaryChartResizeHandler);salaryChartResizeHandler=setTimeout(()=>update(),120)});
 </script>
