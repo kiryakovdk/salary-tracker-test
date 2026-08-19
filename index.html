@@ -161,10 +161,19 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .woa-entry-title{font-size:12px;font-weight:700;letter-spacing:.4px}
 .woa-remove{border:0;background:transparent;color:#8b969d;font-size:18px;line-height:1;cursor:pointer}
 .woa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.woa-grid .field label{
- color:var(--muted)!important;
- -webkit-user-select:none;
- user-select:none;
+.woa-grid .field label,
+.woa-grid .field label:first-child,
+.woa-grid .field label:last-child{
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  color: var(--muted) !important;
+  display: block !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .woa-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -827,6 +836,33 @@ function initWoa(){
  }
  renderWoa();
 }
+
+function woaEarnedAtDate(date, monthly){
+ if(!date || !monthly) return 0;
+ const entries=getWoaEntries();
+ let total=0;
+
+ entries.forEach(entry=>{
+  const s=woaDate(entry.start), e=woaDate(entry.end);
+  if(!s || !e || e<s) return;
+
+  // Before entering WOA: nothing earned.
+  if(date<=s) return;
+
+  let elapsed;
+  if(date>=e){
+   // Once the WOA period is completed, the minimum 5-day payment applies.
+   elapsed=woaPaidDays(s,e);
+  }else{
+   // During an ongoing WOA period, accrue only the actual elapsed days.
+   elapsed=woaActualDays(s,date);
+  }
+
+  total += elapsed*(monthly/30);
+ });
+ return total;
+}
+
 function earnedAtDate(date,start,end,signoff,now,salary){
  if(!date || !start || !salary) return 0;
 
@@ -835,13 +871,14 @@ function earnedAtDate(date,start,end,signoff,now,salary){
  const d = date > actualLimit ? actualLimit : date;
 
  if(d <= end){
-  return Math.max(0,paidAmountBetween(start,d,salary));
+  return Math.max(0,paidAmountBetween(start,d,salary)+woaEarnedAtDate(d,salary));
  }
 
  return Math.max(
   0,
   paidAmountBetween(start,end,salary) +
-  paidAmountBetween(end,d,salary)
+  paidAmountBetween(end,d,salary) +
+  woaEarnedAtDate(d,salary)
  );
 }
 
@@ -1023,6 +1060,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix3</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix5</div>
 </body>
 </html>
