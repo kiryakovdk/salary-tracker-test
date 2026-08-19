@@ -319,7 +319,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="section-title">SALARY PROGRESS</div>
  <div id="salaryGraph" class="salary-graph"></div>
  <div class="chart-legend">
-  <span><i class="legend-dot"></i> Заработано</span>
+  <span><i class="legend-dot"></i> Заработано + WOA</span>
   <span id="chartEndLabel">Contract End: --</span>
   <span id="chartSignoffLabel">Sign-off: --</span>
  </div>
@@ -837,7 +837,8 @@ function initWoa(){
 }
 
 function woaEarnedAtDate(date, monthly){
- if(!date || !monthly) return 0;
+ if(!date || !monthly || monthly<=0) return 0;
+
  const entries=getWoaEntries();
  let total=0;
 
@@ -845,22 +846,23 @@ function woaEarnedAtDate(date, monthly){
   const s=woaDate(entry.start), e=woaDate(entry.end);
   if(!s || !e || e<s) return;
 
-  // Before entering WOA: nothing earned.
+  // Nothing is earned before entering the WOA.
   if(date<=s) return;
 
-  let elapsed;
+  // WOA completed: apply the minimum 5 paid days.
   if(date>=e){
-   // Once the WOA period is completed, the minimum 5-day payment applies.
-   elapsed=woaPaidDays(s,e);
-  }else{
-   // During an ongoing WOA period, accrue only the actual elapsed days.
-   elapsed=woaActualDays(s,date);
+   total += WOA_MIN_DAYS*(monthly/30);
+   return;
   }
 
-  total += elapsed*(monthly/30);
+  // WOA is still in progress: accrue only actual elapsed days.
+  const actual=(date-s)/86400000;
+  if(actual>0) total += actual*(monthly/30);
  });
+
  return total;
 }
+
 
 function earnedAtDate(date,start,end,signoff,now,salary){
  if(!date || !start || !salary) return 0;
@@ -869,17 +871,14 @@ function earnedAtDate(date,start,end,signoff,now,salary){
  const actualLimit = signoff && signoff < now ? signoff : now;
  const d = date > actualLimit ? actualLimit : date;
 
- if(d <= end){
-  return Math.max(0,paidAmountBetween(start,d,salary)+woaEarnedAtDate(d,salary));
- }
+ const regular = d <= end
+  ? paidAmountBetween(start,d,salary)
+  : paidAmountBetween(start,end,salary) + paidAmountBetween(end,d,salary);
 
- return Math.max(
-  0,
-  paidAmountBetween(start,end,salary) +
-  paidAmountBetween(end,d,salary) +
-  woaEarnedAtDate(d,salary)
- );
+ const woa = woaEarnedAtDate(d,salary);
+ return Math.max(0,regular + woa);
 }
+
 
 function renderSalaryGraph(start,end,signoff,now,salary){
  const box=document.getElementById("salaryGraph");
@@ -1059,6 +1058,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix7</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix8</div>
 </body>
 </html>
