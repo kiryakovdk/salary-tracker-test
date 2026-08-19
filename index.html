@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.1</title>
+<title>Salary Tracker v0.8.2</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -731,7 +731,7 @@ function buildSalaryChart(start,end,signoff,now,salary){
  // Main line.
  const poly=document.createElementNS(ns,"polyline");
  poly.setAttribute("fill","none");
- poly.setAttribute("stroke","var(--green)");
+ poly.setAttribute("stroke",getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a");
  poly.setAttribute("stroke-width","2.5");
  poly.setAttribute("stroke-linecap","round");
  poly.setAttribute("stroke-linejoin","round");
@@ -745,7 +745,7 @@ function buildSalaryChart(start,end,signoff,now,salary){
   if(!p) return;
   const c=document.createElementNS(ns,"circle");
   c.setAttribute("cx",X(p.t));c.setAttribute("cy",Y(p.value));c.setAttribute("r","4");
-  c.setAttribute("fill","#0b1013");c.setAttribute("stroke","var(--green)");c.setAttribute("stroke-width","2");
+  c.setAttribute("fill","#0b1013");c.setAttribute("stroke",getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a");c.setAttribute("stroke-width","2");
   svg.appendChild(c);
  });
 
@@ -828,6 +828,7 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("forecastLeft").textContent=fmtUSD(Math.max(0,fe-earned));
  }
  updateSleep(currentPerSec);
+ try{buildSalaryChart(start,end,signoff,now,salary);}catch(e){console.error("Salary graph:",e);}
  save();
 }
 function updateSleep(perSec){
@@ -849,6 +850,6 @@ load();renderHistory();loadRates();update();$("testContract").addEventListener("
 let salaryChartResizeHandler;
 window.addEventListener("resize",()=>{clearTimeout(salaryChartResizeHandler);salaryChartResizeHandler=setTimeout(()=>update(),120)});
 </script>
-<div class="app-version">Salary Tracker • v0.8.1 • Build 2026-08-19</div>
+<div class="app-version">Salary Tracker • v0.8.2 • Build 2026-08-19</div>
 </body>
 </html>
