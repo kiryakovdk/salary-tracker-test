@@ -161,20 +161,19 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .woa-entry-title{font-size:12px;font-weight:700;letter-spacing:.4px}
 .woa-remove{border:0;background:transparent;color:#8b969d;font-size:18px;line-height:1;cursor:pointer}
 .woa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.woa-grid .field label,
-.woa-grid .field label:first-child,
-.woa-grid .field label:last-child{
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  line-height: 1.2 !important;
-  letter-spacing: .4px !important;
-  color: var(--muted) !important;
-  display: block !important;
-  margin-bottom: 7px !important;
-  transform: none !important;
-  -webkit-transform: none !important;
-  -webkit-user-select: none;
-  user-select: none;
+.woa-date-label{
+  display:block !important;
+  color:var(--muted) !important;
+  font-size:9px !important;
+  font-weight:400 !important;
+  line-height:1.2 !important;
+  letter-spacing:.4px !important;
+  margin:0 0 7px !important;
+  text-transform:uppercase !important;
+  transform:none !important;
+  -webkit-transform:none !important;
+  -webkit-user-select:none;
+  user-select:none;
 }
 
 .woa-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
@@ -748,9 +747,8 @@ function renderWoa(){
     <button class="woa-remove" type="button" data-woa-remove="${i}">×</button>
    </div>
    <div class="woa-grid">
-    <div class="field"><label>Start</label><input type="date" data-woa-start="${i}" value="${entry.start||""}"></div>
-    <div class="field"><la
-bel>End</label><input type="date" data-woa-end="${i}" value="${entry.end||""}"></div>
+    <div class="field"><label class="woa-date-label">Start</label><input type="date" data-woa-start="${i}" value="${entry.start||""}"></div>
+    <div class="field"><label class="woa-date-label">End</label><input type="date" data-woa-end="${i}" value="${entry.end||""}"></div>
    </div>
    <div class="woa-meta">
     <div class="woa-stat"><div class="woa-stat-label">Actual</div><div class="woa-stat-value">${formatWoaDays(x.actual)} days</div></div>
@@ -1061,6 +1059,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix6</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix7</div>
 </body>
 </html>
