@@ -150,6 +150,12 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
 .overtime-card.active .section-title{color:var(--green)}
+.chart-wrap{position:relative;width:100%;height:220px;margin-top:8px}
+#salaryChart{display:block;width:100%;height:100%;touch-action:none}
+.chart-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
+.chart-legend span{display:inline-flex;align-items:center;gap:5px}
+.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.chart-tooltip{position:absolute;pointer-events:none;z-index:5;background:#10171c;border:1px solid #2a363e;border-radius:9px;padding:8px 10px;font-size:11px;line-height:1.45;box-shadow:0 8px 20px rgba(0,0,0,.35);display:none;white-space:nowrap}
 .total-earned-row{margin-top:9px;padding-top:9px;border-top:1px solid #263139;font-weight:750}
 .total-earned-row span:last-child{font-size:16px;color:var(--green);font-variant-numeric:tabular-nums}
 .history-item{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:13px;margin-top:9px}
@@ -259,6 +265,18 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
  <div class="row" style="margin-top:10px"><span>В день</span><span id="overtimeDay">$0.00</span></div>
  <div class="row"><span>В час</span><span id="overtimeHour">$0.00</span></div>
+</div>
+
+<div class="card" id="salaryGraphCard">
+ <div class="section-title">SALARY PROGRESS</div>
+ <div class="chart-wrap">
+  <canvas id="salaryChart" aria-label="График накопленного заработка"></canvas>
+ </div>
+ <div class="chart-legend">
+  <span><i class="legend-dot"></i> Заработано</span>
+  <span id="chartEndLabel">Contract End: --</span>
+  <span id="chartSignoffLabel">Sign-off: --</span>
+ </div>
 </div>
 
 <div class="card" id="allTimeCard">
@@ -615,12 +633,122 @@ function clearTestHistory(){
  renderHistory();
 }
 
+
+function buildSalaryChart(start,end,signoff,now,salary){
+ const canvas=$("salaryChart");
+ if(!canvas) return;
+ const wrap=canvas.parentElement;
+ const dpr=window.devicePixelRatio||1;
+ const w=Math.max(300,wrap.clientWidth),h=Math.max(180,wrap.clientHeight);
+ canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
+ const ctx=canvas.getContext("2d");
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ ctx.clearRect(0,0,w,h);
+
+ if(!start||!end){
+  ctx.fillStyle="#7f8a92"; ctx.font="12px system-ui";
+  ctx.fillText("Укажи даты контракта",14,28);
+  return;
+ }
+
+ const chartEnd=signoff && signoff> end ? signoff : Math.max(now,end);
+ const last=Math.max(chartEnd.getTime(),end.getTime());
+ const first=start.getTime();
+ const span=Math.max(1,last-first);
+ const points=[];
+ const dayMs=86400000;
+
+ // One point per day, plus exact end/sign-off/now points.
+ for(let t=first;t<=last;t+=dayMs){
+  const dt=new Date(t);
+  const capped=new Date(Math.min(t,last));
+  const amount=dt<=end ? totalPaidContract(start,dt,salary) : totalPaidContract(start,end,salary)+paidAmountBetween(end,capped,salary);
+  points.push({t,dt,amount});
+ }
+ const addPoint=(dt)=>{
+  if(!dt) return;
+  const t=dt.getTime();
+  if(t<first||t>last) return;
+  const amount=dt<=end ? totalPaidContract(start,dt,salary) : totalPaidContract(start,end,salary)+paidAmountBetween(end,dt,salary);
+  points.push({t,dt,amount});
+ };
+ addPoint(end);
+ if(signoff) addPoint(signoff);
+ if(now>=first && now<=last) addPoint(now);
+ points.sort((a,b)=>a.t-b.t);
+ const unique=[];
+ for(const p of points){ if(!unique.length||p.t!==unique[unique.length-1].t) unique.push(p); }
+
+ const pad={l:46,r:12,t:14,b:30};
+ const cw=w-pad.l-pad.r,ch=h-pad.t-pad.b;
+ const maxVal=Math.max(1,...unique.map(p=>p.amount));
+ const niceStep=maxVal<=5000?1000:maxVal<=20000?5000:10000;
+ const yMax=Math.ceil(maxVal/niceStep)*niceStep;
+
+ ctx.strokeStyle="#1c252b"; ctx.lineWidth=1;
+ ctx.font="10px system-ui"; ctx.fillStyle="#7f8a92";
+ for(let i=0;i<=4;i++){
+  const y=pad.t+ch*i/4;
+  ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+  const v=yMax*(1-i/4);
+  ctx.fillText(fmtCompactMoney(v),4,y+3);
+ }
+
+ const x=t=>pad.l+((t-first)/span)*cw;
+ const y=v=>pad.t+ch-(v/yMax)*ch;
+
+ // Contract end marker.
+ const ex=x(end.getTime());
+ ctx.save();
+ ctx.setLineDash([4,4]);
+ ctx.strokeStyle="#64717a";
+ ctx.beginPath();ctx.moveTo(ex,pad.t);ctx.lineTo(ex,pad.t+ch);ctx.stroke();
+ ctx.restore();
+
+ if(signoff && signoff> end && signoff.getTime()<=last){
+  const sx=x(signoff.getTime());
+  ctx.save();ctx.setLineDash([3,4]);ctx.strokeStyle="#8a949b";
+  ctx.beginPath();ctx.moveTo(sx,pad.t);ctx.lineTo(sx,pad.t+ch);ctx.stroke();
+  ctx.restore();
+ }
+
+ // Line.
+ ctx.beginPath();
+ unique.forEach((p,i)=>{const px=x(p.t),py=y(p.amount);i?ctx.lineTo(px,py):ctx.moveTo(px,py)});
+ ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a";
+ ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";ctx.stroke();
+
+ // Start/end dots.
+ for(const p of unique){
+  if(p.t===start.getTime()||p.t===end.getTime()||(signoff&&p.t===signoff.getTime())){
+   ctx.fillStyle="#0b1013";ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a";
+   ctx.lineWidth=2;ctx.beginPath();ctx.arc(x(p.t),y(p.amount),4,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }
+ }
+
+ // X-axis labels.
+ const labels=[start,end];
+ if(signoff && signoff.getTime()!==end.getTime()) labels.push(signoff);
+ ctx.fillStyle="#7f8a92";ctx.font="10px system-ui";ctx.textAlign="center";
+ labels.forEach((dt,i)=>{
+  const px=x(dt.getTime());
+  let label=i===0?"Start":dt.getTime()===end.getTime()?"Contract End":"Sign-off";
+  ctx.fillText(label,Math.max(pad.l,Math.min(w-pad.r,px)),h-8);
+ });
+ ctx.textAlign="left";
+}
+function fmtCompactMoney(v){
+ if(v>=1000000) return "$"+(v/1000000).toFixed(1)+"M";
+ if(v>=1000) return "$"+(v/1000).toFixed(v>=10000?0:1)+"k";
+ return "$"+Math.round(v);
+}
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=paidAmountBetween(start,now,salary);
- let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
+ let overtimeEarned=updateOvertime(end,signoff,now,salary);
+ buildSalaryChart(start,end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
 
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
@@ -643,6 +771,8 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
  $("contractTotalEarned").textContent=fmtUSD(totalPaidContract(start,end,salary)+overtimeEarned);
+ $("chartEndLabel").textContent="Contract End: "+(end?end.toLocaleDateString("ru-RU"):"--");
+ $("chartSignoffLabel").textContent="Sign-off: "+(signoff?signoff.toLocaleDateString("ru-RU"):"--");
  } else {
   $("contractTotalEarned").textContent=fmtUSD(overtimeEarned);
  }
@@ -686,6 +816,8 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
 load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
+let salaryChartResizeHandler;
+window.addEventListener("resize",()=>{clearTimeout(salaryChartResizeHandler);salaryChartResizeHandler=setTimeout(()=>update(),120)});
 </script>
 </body>
 </html>
