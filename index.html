@@ -918,7 +918,9 @@ function renderSalaryGraph(start,end,signoff,now,salary){
  const span=Math.max(1,last-first);
  const pw=w-L-R,ph=h-T-B;
  const max=Math.max(1,...points.map(p=>p[1]));
- const yMax=Math.max(1000,Math.ceil(max/1000)*1000);
+ // Keep the graph scale close to the real earned amount.
+ // Do not jump to a whole $1k step just because the value crossed it.
+ const yMax=Math.max(100,Math.ceil(max/100)*100);
 
  const X=t=>L+((t-first)/span)*pw;
  const Y=v=>T+ph-(v/yMax)*ph;
@@ -929,8 +931,11 @@ function renderSalaryGraph(start,end,signoff,now,salary){
  for(let i=0;i<=4;i++){
   const y=T+ph*i/4;
   const value=yMax*(1-i/4);
+  const compact=value>=1000
+    ? "$"+(value/1000).toFixed(value%1000===0?0:1)+"k"
+    : "$"+Math.round(value);
   s+=`<line x1="${L}" y1="${y}" x2="${w-R}" y2="${y}" stroke="#202a30"/>`;
-  s+=`<text x="3" y="${y+4}" fill="#7f8a92" font-size="10">$${Math.round(value/1000)}k</text>`;
+  s+=`<text x="3" y="${y+4}" fill="#7f8a92" font-size="10">${compact}</text>`;
  }
 
  // Only show Contract End marker when it has actually happened.
@@ -1058,6 +1063,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix8</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix9</div>
 </body>
 </html>
