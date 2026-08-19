@@ -503,8 +503,7 @@ async function loadRates(){
       $("rubRate").textContent="1 USD = ₽"+usd.toFixed(4);
       $("eurRate").textContent="1 EUR = ₽"+eur.toFixed(4);
       renderTicker();
-      initWoa();
-update();
+      update();
       return;
     }catch(e){}
   }
@@ -735,7 +734,7 @@ function renderWoa(){
    <div class="woa-grid">
     <div class="field"><label>Start</label><input type="date" data-woa-start="${i}" value="${entry.start||""}"></div>
     <div class="field"><la
- let woaEarned=getWoaEarned();bel>End</label><input type="date" data-woa-end="${i}" value="${entry.end||""}"></div>
+bel>End</label><input type="date" data-woa-end="${i}" value="${entry.end||""}"></div>
    </div>
    <div class="woa-meta">
     <div class="woa-stat"><div class="woa-stat-label">Actual</div><div class="woa-stat-value">${formatWoaDays(x.actual)} days</div></div>
@@ -916,6 +915,7 @@ function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
+ let woaEarned=getWoaEarned();
  let earned=paidAmountBetween(start,now,salary)+woaEarned;
  let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
 
@@ -983,8 +983,8 @@ $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("fore
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
-load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
+load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix1</div>
 </body>
 </html>
