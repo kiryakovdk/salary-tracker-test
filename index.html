@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Salary Tracker</title>
+<style>
+:root{
+  --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
+  --text:#eef3f5;--muted:#7f8c95;--green:#54e39a;--green2:#1fc477;
+  --amber:#f1c75b;--red:#ff6f6f;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:radial-gradient(circle at top,#111a20 0,#070a0d 45%,#050709 100%);
+ color:var(--text);
+ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ padding-top:calc(20px + env(safe-area-inset-top));
+ padding-right:calc(14px + env(safe-area-inset-right));
+ padding-bottom:calc(40px + env(safe-area-inset-bottom));
+ padding-left:calc(14px + env(safe-area-inset-left));
+}
+.wrap{max-width:900px;margin:auto}
+header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ min-height:42px;
+ margin-bottom:18px;
+ position:relative;
+ z-index:2;
+}
+h1{font-size:22px;margin:0;letter-spacing:.5px;line-height:1.1;font-weight:750;white-space:nowrap}
+.badge{font-size:11px;color:var(--green);border:1px solid #24543f;border-radius:20px;padding:6px 9px;letter-spacing:1px}
+.card{background:linear-gradient(145deg,#11171c,#0c1115);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 8px 30px #0005}
+label{display:block;color:var(--muted);font-size:12px;margin:0 0 7px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid > div{min-width:0}
+input{
+ display:block;
+ width:100%;
+ max-width:100%;
+ min-width:0;
+ box-sizing:border-box;
+ background:#080c0f;color:#fff;border:1px solid #29323a;border-radius:10px;
+ padding:12px 10px;font-size:15px;outline:none;
+ -webkit-appearance:none;
+}
+input:focus{border-color:#4d626e}
+.hero{text-align:center;padding:26px 14px}
+.kicker{font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.amount{font-variant-numeric:tabular-nums;font-size:clamp(38px,9vw,68px);font-weight:750;letter-spacing:-2px;color:var(--green);margin:8px 0 2px}
+.live{font-size:11px;color:var(--green);letter-spacing:1px}
+.live:before{content:"●";margin-right:6px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-radius:13px;overflow:hidden;margin-top:22px}
+.stat{background:#0b1014;padding:14px 8px;text-align:center}
+.stat b{display:block;font-size:17px;margin-top:5px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--muted)}
+.section-title{font-size:13px;font-weight:700;letter-spacing:.8px;margin-bottom:14px}
+.row{display:flex;justify-content:space-between;gap:15px;padding:9px 0;border-bottom:1px solid #1c242a;font-size:13px}
+.row:last-child{border-bottom:0}
+.row span:first-child{color:var(--muted)}
+.row span:last-child{text-align:right;font-weight:600}
+.progress{height:11px;background:#070b0e;border:1px solid #20292f;border-radius:99px;overflow:hidden}
+.bar{height:100%;width:0;background:linear-gradient(90deg,var(--green2),var(--green));transition:width .5s}
+.progress-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:8px}
+
+to{transform:translateX(-50%)}}
+
+
+to{transform:translateX(-50%)}
+}
+
+
+to{transform:translateX(-50%)}
+}
+
+
+
+
+.ticker{
+  display:block;
+  position:relative;
+  width:100%;
+  height:40px;
+  margin:10px 0 16px;
+  box-sizing:border-box;
+  overflow:hidden;
+  border:1px solid #26323a;
+  border-radius:10px;
+  background:#05080a;
+}
+.ticker-window{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  border-radius:9px;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 32px,#000 calc(100% - 32px),transparent 100%);
+  mask-image:linear-gradient(to right,transparent 0,#000 32px,#000 calc(100% - 32px),transparent 100%);
+}
+.ticker-track{
+  display:flex;
+  align-items:center;
+  width:max-content;
+  height:100%;
+  white-space:nowrap;
+  animation:tickerMove 28s linear infinite;
+  will-change:transform;
+}
+.ticker-group{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  height:100%;
+}
+.tick{
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  gap:7px;
+  height:100%;
+  padding:0 16px;
+  box-sizing:border-box;
+  border-right:1px solid #202a30;
+  font-size:12px;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.tick .pair{color:#8d99a2;font-weight:700;letter-spacing:.4px}
+.tick .price{color:#f2f5f6;font-weight:700}
+.tick .live-dot{color:#54e39a;font-size:9px}
+@keyframes tickerMove{
+  from{transform:translateX(0)}
+  to{transform:translateX(-50%)}
+}
+
+.currency{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.currency .box{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:14px}
+.currency .value{font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.currency .rate{font-size:11px;color:var(--muted);margin-top:5px}
+button{
+ background:#e8edef;color:#071014;border:0;border-radius:10px;padding:10px 13px;font-weight:700;cursor:pointer
+}
+button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.warning{color:var(--amber)}
+.paused{color:var(--amber)!important}
+.overtime-card{transition:opacity .25s,border-color .25s}
+.overtime-card.inactive{opacity:.55}
+.overtime-card.active{border-color:#24543f}
+.overtime-card.active .section-title{color:var(--green)}
+.forecast{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bigbox{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:16px}
+.bigbox b{display:block;font-size:25px;margin-top:4px;font-variant-numeric:tabular-nums}
+.small{font-size:11px;color:var(--muted)}
+footer{text-align:center;color:#56626a;font-size:10px;margin-top:18px;line-height:1.5}
+@media(max-width:650px){
+ .grid,.forecast,.currency{grid-template-columns:minmax(0,1fr)}
+ .stats{grid-template-columns:repeat(2,1fr)}
+}
+
+html,body{max-width:100%;overflow-x:hidden}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#070a0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Salary Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+</head>
+<body>
+<div class="wrap">
+<header>
+ <h1>⚓ SALARY TRACKER</h1><div class="badge">LIVE</div>
+</header>
+
+<div class="card">
+ <div class="grid">
+  <div><label>Месячная зарплата, USD</label><input id="salary" type="number" min="0" step=".01" value="5100"></div>
+  <div><label>Начало зарплаты</label><input id="start" type="date"></div>
+  <div><label>Конец контракта</label><input id="end" type="date"></div>
+  <div><label>Прогноз до даты</label><input id="forecast" type="date"></div>
+ </div>
+ <div class="buttons">
+  <button class="secondary" id="nowEnd">Поставить конец через 4 месяца</button>
+  <button class="secondary" id="nowForecast">Прогноз +30 дней</button>
+  <button class="secondary" id="reset">Сбросить</button>
+ </div>
+</div>
+
+<div class="card hero">
+ <div class="kicker">Заработано с начала зарплаты</div>
+ <div class="amount" id="usd">$0.00</div>
+ <div class="live" id="liveStatus">НАЧИСЛЕНИЕ ИДЁТ</div>
+ <div class="stats">
+  <div class="stat"><span>В секунду</span><b id="sec">$0.001968</b></div>
+  <div class="stat"><span>В минуту</span><b id="min">$0.12</b></div>
+  <div class="stat"><span>В час</span><b id="hour">$7.08</b></div>
+  <div class="stat"><span>В оплач. день</span><b id="paidDay">$0.00</b></div>
+ </div>
+</div>
+
+<div class="card">
+ <div class="section-title">CONTRACT STATUS</div>
+ <div class="progress"><div class="bar" id="bar"></div></div>
+ <div class="progress-meta"><span id="progressText">0%</span><span id="remaining">Осталось: --</span></div>
+ <div style="margin-top:10px">
+  <div class="row"><span>Период</span><span id="period">--</span></div>
+  <div class="row"><span>Прошло оплачиваемого времени</span><span id="elapsed">0 дн. 00:00:00</span></div>
+  <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
+ </div>
+</div>
+
+<div class="card">
+ <div class="section-title">CURRENCY</div>
+ <div class="ticker" aria-label="Курсы валют">
+  <div class="ticker-window">
+   <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+ </div>
+<div class="currency">
+  <div class="box"><div class="small">Российские рубли</div><div class="value" id="rub">₽0.00</div><div class="rate" id="rubRate">Курс ЦБ: загрузка...</div></div>
+  <div class="box"><div class="small">Евро</div><div class="value" id="eur">€0.00</div><div class="rate" id="eurRate">Курс ЦБ: загрузка...</div></div>
+ </div>
+</div>
+
+<div class="card">
+ <div class="section-title">TODAY</div>
+ <div class="row"><span>Начислено сегодня</span><span id="todayEarn">$0.00</span></div>
+ <div class="row"><span>Статус 31-го числа</span><span id="day31">Оплачивается</span></div>
+  <div class="row"><span>Расчёт месяца</span><span id="monthRule">—</span></div>
+ <div class="row"><span>До конца сегодняшнего оплачиваемого дня</span><span id="todayLeft">--</span></div>
+</div>
+
+<div class="card overtime-card inactive" id="overtimeCard">
+ <div class="section-title">OVERTIME</div>
+ <div class="small" id="overtimeStatus">После окончания контракта</div>
+ <div class="forecast">
+  <div class="bigbox"><div class="small">Переработано после контракта</div><b id="overtimeTime">0 дн. 00:00:00</b></div>
+  <div class="bigbox"><div class="small">Заработано после контракта</div><b id="overtimeEarn">$0.00</b></div>
+ </div>
+ <div class="row" style="margin-top:10px"><span>В день</span><span id="overtimeDay">$0.00</span></div>
+ <div class="row"><span>В час</span><span id="overtimeHour">$0.00</span></div>
+</div>
+
+<div class="card">
+ <div class="section-title">TOTAL EARNED</div>
+ <div class="bigbox"><div class="small">Контракт + переработка</div><b id="totalEarned">$0.00</b></div>
+ <div class="row" style="margin-top:10px"><span>Контракт</span><span id="totalContract">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="totalOvertime">$0.00</span></div>
+</div>
+
+<div class="card">
+ <div class="section-title">FORECAST</div>
+ <div class="forecast">
+  <div class="bigbox"><div class="small">Заработаю к выбранной дате</div><b id="forecastEarn">$0.00</b></div>
+  <div class="bigbox"><div class="small">Сколько осталось заработать</div><b id="forecastLeft">$0.00</b></div>
+ </div>
+</div>
+
+<div class="card">
+ <div class="section-title">SLEEP MODE 😴</div>
+ <div class="grid">
+  <div><label>Лёг спать</label><input id="sleepStart" type="time" value="00:00"></div>
+  <div><label>Проснулся</label><input id="sleepEnd" type="time" value="08:00"></div>
+ </div>
+ <div class="row" style="margin-top:10px"><span>Пока спал, заработано</span><span id="sleepEarn">$0.00</span></div>
+</div>
+
+<footer>
+Зарплата распределяется на 30 оплачиваемых суток. В месяцах с 31 днём 31-е число не начисляется.<br>
+Курсы RUB/EUR загружаются по официальным курсам ЦБ РФ. Данные сохраняются в браузере.
+</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let rates={usdRub:null,eurRub:null,cnyRub:null};
+
+function pad(n){return String(n).padStart(2,"0")}
+function localInput(d){
+ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+}
+function getDate(id){
+ const value=$(id).value;
+ if(!value) return null;
+ const parts=value.split("-").map(Number);
+ if(parts.length!==3 || parts.some(Number.isNaN)) return null;
+ const d=new Date(parts[0],parts[1]-1,parts[2],0,0,0,0);
+ return Number.isNaN(d.getTime())?null:d;
+}
+function fmtUSD(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtDuration(s){
+ s=Math.max(0,Math.floor(s));let d=Math.floor(s/86400);s%=86400;
+ let h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60);s%=60;
+ return `${d} дн. ${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+/* Зарплата считается отдельно по каждому календарному месяцу.
+   31-е число не оплачивается. Февраль оплачивается полностью за 28/29 дней,
+   поэтому месячная зарплата не уменьшается из-за короткого месяца. */
+function payableDaysInMonth(year,month){
+  const days=new Date(year,month+1,0).getDate();
+  return days===31 ? 30 : days;
+}
+function paidSecondsInMonth(year,month){
+  return payableDaysInMonth(year,month)*86400;
+}
+function paidAmountBetween(a,b,salary){
+  if(!a||!b||b<=a||salary<=0)return 0;
+  let total=0,c=new Date(a);
+  while(c<b){
+    const year=c.getFullYear(), month=c.getMonth();
+    const next=new Date(year,month+1,1);
+    const e=b<next?b:next;
+    let seconds=0;
+    if(c.getDate()!==31) seconds=(e-c)/1000;
+    total += seconds * salary / paidSecondsInMonth(year,month);
+    c=e;
+  }
+  return Math.max(0,total);
+}
+function monthlyPerSecond(year,month,salary){
+  return salary/paidSecondsInMonth(year,month);
+}
+function paidBetween(a,b){
+  if(!a||!b||b<=a)return 0;
+  let total=0,c=new Date(a);
+  while(c<b){
+    const year=c.getFullYear(), month=c.getMonth();
+    const next=new Date(year,month+1,1);
+    const e=b<next?b:next;
+    if(c.getDate()!==31) total+=(e-c)/1000;
+    c=e;
+  }
+  return Math.max(0,total);
+}
+function totalPaidContract(a,b,salary){return paidAmountBetween(a,b,salary)}
+function initDates(){
+ let now=new Date();now.setSeconds(0,0);
+ $("start").value=localInput(now);
+ let end=new Date(now);end.setMonth(end.getMonth()+4);
+ $("end").value=localInput(end);
+ let f=new Date(now);f.setDate(f.getDate()+30);
+ $("forecast").value=localInput(f);
+}
+function save(){
+ localStorage.setItem("salaryTracker",JSON.stringify({
+  salary:$("salary").value,start:$("start").value,end:$("end").value,forecast:$("forecast").value,
+  sleepStart:$("sleepStart").value,sleepEnd:$("sleepEnd").value
+ }));
+}
+function load(){
+ let x=localStorage.getItem("salaryTracker");
+ if(!x){initDates();return}
+ try{
+  x=JSON.parse(x);
+  ["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(k=>{
+   if(x[k]!=null){
+     $(k).value=(["start","end","forecast"].includes(k) && String(x[k]).includes("T"))
+       ? String(x[k]).slice(0,10)
+       : x[k];
+   }
+  });
+ }catch(e){initDates()}
+}
+
+function renderTicker(){
+  if(!rates.usdRub || !rates.eurRub || !rates.cnyRub) return;
+
+  const items=[
+    ["USD/RUB",rates.usdRub.toFixed(4)],
+    ["EUR/RUB",rates.eurRub.toFixed(4)],
+    ["CNY/RUB",rates.cnyRub.toFixed(4)],
+    ["EUR/USD",(rates.eurRub/rates.usdRub).toFixed(5)]
+  ];
+
+  const group=items.map(([pair,price]) =>
+    `<div class="tick"><span class="pair">${pair}</span><span class="price">${price}</span><span class="live-dot">● LIVE</span></div>`
+  ).join("");
+
+  $("tickerTrack").innerHTML=
+    `<div class="ticker-group">${group}</div>`+
+    `<div class="ticker-group">${group}</div>`;
+}
+
+async function loadRates(){
+  const sources=[
+    "https://www.cbr.ru/scripts/XML_daily.asp",
+    "https://corsproxy.io/?url="+encodeURIComponent("https://www.cbr.ru/scripts/XML_daily.asp"),
+    "https://api.allorigins.win/raw?url="+encodeURIComponent("https://www.cbr.ru/scripts/XML_daily.asp")
+  ];
+
+  for(const url of sources){
+    try{
+      const r=await fetch(url,{cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const x=new DOMParser().parseFromString(await r.text(),"text/xml");
+      let usd=null,eur=null,cny=null;
+
+      x.querySelectorAll("Valute").forEach(v=>{
+        const code=v.querySelector("CharCode")?.textContent;
+        const value=parseFloat((v.querySelector("Value")?.textContent||"").replace(",","."));
+        const nominal=parseFloat(v.querySelector("Nominal")?.textContent||"1");
+        if(code==="USD" && Number.isFinite(value)) usd=value/nominal;
+        if(code==="EUR" && Number.isFinite(value)) eur=value/nominal;
+        if(code==="CNY" && Number.isFinite(value)) cny=value/nominal;
+      });
+
+      if(!usd || !eur || !cny) throw new Error("USD/EUR/CNY не найдены");
+
+      rates={usdRub:usd,eurRub:eur,cnyRub:cny};
+      localStorage.setItem("salaryTrackerRates",JSON.stringify({...rates,updated:Date.now()}));
+
+      $("rubRate").textContent="1 USD = ₽"+usd.toFixed(4);
+      $("eurRate").textContent="1 EUR = ₽"+eur.toFixed(4);
+      renderTicker();
+      update();
+      return;
+    }catch(e){}
+  }
+
+  const saved=JSON.parse(localStorage.getItem("salaryTrackerRates")||"null");
+  if(saved && saved.usdRub && saved.eurRub && saved.cnyRub){
+    rates=saved;
+  }else{
+    rates={usdRub:78.4756,eurRub:89.6034,cnyRub:10.95};
+  }
+
+  $("rubRate").textContent="Курс USD: ₽"+rates.usdRub.toFixed(4);
+  $("eurRate").textContent="Курс EUR: ₽"+rates.eurRub.toFixed(4);
+  renderTicker();
+  update();
+}
+function updateOvertime(end,now,salary){
+ const card=$("overtimeCard");
+ if(!end || now<=end){
+  card.classList.add("inactive"); card.classList.remove("active");
+  $("overtimeStatus").textContent=end?"Переработка начнётся после окончания контракта":"Укажи конец контракта";
+  $("overtimeTime").textContent="0 дн. 00:00:00";
+  $("overtimeEarn").textContent="$0.00";
+  $("overtimeDay").textContent="$0.00";
+  $("overtimeHour").textContent="$0.00";
+  return 0;
+ }
+ card.classList.remove("inactive"); card.classList.add("active");
+ const seconds=(now-end)/1000;
+ const earned=paidAmountBetween(end,now,salary);
+ const dayRate=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
+ $("overtimeStatus").textContent="CONTRACT ENDED • OVERTIME ACTIVE";
+ $("overtimeTime").textContent=fmtDuration(seconds);
+ $("overtimeEarn").textContent=fmtUSD(earned);
+ $("overtimeDay").textContent=fmtUSD(dayRate);
+ $("overtimeHour").textContent=fmtUSD(dayRate/24);
+ return earned;
+}
+function update(){
+ let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), now=new Date();
+ let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
+ let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
+ let earned=paidAmountBetween(start,now,salary);
+ let overtimeEarned=updateOvertime(end,now,salary);
+ $("usd").textContent=fmtUSD(earned);
+ $("paidDay").textContent=fmtUSD(currentPaidDay);
+$("sec").textContent=fmtUSD(currentPerSec);
+$("min").textContent=fmtUSD(currentPerSec*60);
+$("hour").textContent=fmtUSD(currentPerSec*3600);
+ $("rub").textContent=rates.usdRub?"₽"+(earned*rates.usdRub).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2}):"₽—";
+ $("eur").textContent=rates.usdRub&&rates.eurRub?"€"+(earned*rates.usdRub/rates.eurRub).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"€—";
+
+ if(start){
+  $("elapsed").textContent=fmtDuration(paidBetween(start,now));
+  $("period").textContent=start.toLocaleDateString("ru-RU")+" → "+(end?end.toLocaleDateString("ru-RU"):"—");
+ }
+ if(end&&start){
+  let all=(end-start)/1000, done=Math.max(0,Math.min(all,(now-start)/1000));
+  let pct=all>0?done/all*100:0;
+  $("bar").style.width=Math.min(100,pct)+"%";
+  $("progressText").textContent=pct.toFixed(1)+"%";
+  $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
+  $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
+ }
+ $("totalContract").textContent=fmtUSD(start&&end?totalPaidContract(start,end,salary):0);
+ $("totalOvertime").textContent=fmtUSD(overtimeEarned);
+ $("totalEarned").textContent=fmtUSD((start&&end?totalPaidContract(start,end,salary):0)+overtimeEarned);
+ let is31=now.getDate()===31;
+ $("day31").textContent=is31?"⏸ 31-е число не оплачивается":"✓ Оплачивается";
+ $("day31").className=is31?"paused":"";
+ const monthDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+ $("monthRule").textContent =
+   monthDays===28 ? "28 оплачиваемых дней" :
+   monthDays===29 ? "29 оплачиваемых дней" :
+   monthDays===31 ? "30 оплачиваемых дней (31-е не оплачивается)" :
+   "30 оплачиваемых дней";
+ let dayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+ let today=paidAmountBetween(dayStart,now,salary);
+ $("todayEarn").textContent=fmtUSD(today);
+ let next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+ $("todayLeft").textContent=fmtDuration((next-now)/1000);
+
+ let f=getDate("forecast");
+ if(f&&start){
+  let fe=paidAmountBetween(start,f,salary);
+  $("forecastEarn").textContent=fmtUSD(fe);
+  $("forecastLeft").textContent=fmtUSD(Math.max(0,fe-earned));
+ }
+ updateSleep(currentPerSec);
+ save();
+}
+function updateSleep(perSec){
+ let ss=$("sleepStart").value,se=$("sleepEnd").value;if(!ss||!se)return;
+ let now=new Date(),s=ss.split(":").map(Number),e=se.split(":").map(Number);
+ let a=new Date(now.getFullYear(),now.getMonth(),now.getDate(),s[0],s[1]);
+ let b=new Date(now.getFullYear(),now.getMonth(),now.getDate(),e[0],e[1]);
+ if(b<=a)b.setDate(b.getDate()+1);
+ let sec=paidBetween(a,b);$("sleepEarn").textContent=fmtUSD(sec*perSec);
+}
+["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
+$("reset").onclick=()=>{localStorage.removeItem("salaryTracker");initDates();$("salary").value=5100;update()};
+$("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);update()};
+$("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+load();loadRates();update();setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
+</script>
+</body>
+</html>
