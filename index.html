@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.4</title>
+<title>Salary Tracker v0.8.5</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -632,6 +632,25 @@ function clearTestHistory(){
 }
 
 
+
+function earnedAtDate(date,start,end,signoff,now,salary){
+ if(!date || !start || !salary) return 0;
+
+ // Contract earnings accumulated up to this exact date.
+ if(date<=end){
+  return Math.max(0,paidAmountBetween(start,date,salary));
+ }
+
+ // After Contract End, add only the overtime earned up to this date.
+ const overtimeLimit=signoff && signoff<now ? signoff : date;
+ const overtimeDate=date<overtimeLimit?date:overtimeLimit;
+ return Math.max(
+  0,
+  paidAmountBetween(start,end,salary)+
+  paidAmountBetween(end,overtimeDate,salary)
+ );
+}
+
 function renderSalaryGraph(start,end,signoff,now,salary){
  const box=document.getElementById("salaryGraph");
  if(!box) return;
@@ -642,28 +661,24 @@ function renderSalaryGraph(start,end,signoff,now,salary){
  }
 
  const first=start.getTime();
- const lastDate=(signoff && signoff>end)?signoff:now;
- const last=Math.max(end.getTime(),lastDate.getTime());
- const span=Math.max(1,last-first);
+ const finalDate=(signoff && signoff>end)?signoff:now;
+ const last=Math.max(end.getTime(),finalDate.getTime());
  const day=86400000;
  const points=[];
 
- // Cumulative earnings at EACH DATE, not the final contract amount.
- const cumulativeAt = (d) => {
-  if(d <= end) return paidAmountBetween(start,d,salary);
-  return paidAmountBetween(start,end,salary) + paidAmountBetween(end,d,salary);
- };
-
+ // Build one point per calendar day, using earnedAtDate() for every point.
  for(let t=first;t<=last;t+=day){
   const d=new Date(t);
-  points.push([t,Math.max(0,cumulativeAt(d))]);
+  points.push([t,earnedAtDate(d,start,end,signoff,now,salary)]);
  }
 
+ // Always include exact contract/sign-off/current boundaries.
  const addPoint=(d)=>{
   if(!d) return;
   const t=d.getTime();
   if(t<first || t>last) return;
-  if(!points.some(p=>p[0]===t)) points.push([t,Math.max(0,cumulativeAt(d))]);
+  if(!points.some(p=>p[0]===t))
+   points.push([t,earnedAtDate(d,start,end,signoff,now,salary)]);
  };
  addPoint(end);
  addPoint(signoff);
@@ -672,6 +687,7 @@ function renderSalaryGraph(start,end,signoff,now,salary){
 
  const w=Math.max(280,box.clientWidth||320);
  const h=220,L=44,R=10,T=12,B=30;
+ const span=Math.max(1,last-first);
  const pw=w-L-R,ph=h-T-B;
  const max=Math.max(1,...points.map(p=>p[1]));
  const yMax=Math.max(1000,Math.ceil(max/1000)*1000);
@@ -704,7 +720,6 @@ function renderSalaryGraph(start,end,signoff,now,salary){
   [end,"Contract End"],
   ...(signoff && signoff.getTime()!==end.getTime()?[[signoff,"Sign-off"]]:[])
  ];
-
  labels.forEach(([d,label])=>{
   const p=points.find(x=>x[0]===d.getTime());
   if(!p) return;
@@ -792,6 +807,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.4 • Build 2026-08-19</div>
+<div class="app-version">Salary Tracker • v0.8.5 • Build 2026-08-19</div>
 </body>
 </html>
