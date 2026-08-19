@@ -183,6 +183,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <div><label>Месячная зарплата, USD</label><input id="salary" type="number" min="0" step=".01" value="5100"></div>
   <div><label>Начало зарплаты</label><input id="start" type="date"></div>
   <div><label>Конец контракта</label><input id="end" type="date"></div>
+  <div><label>Фактическое списание</label><input id="signoff" type="date"></div>
   <div><label>Прогноз до даты</label><input id="forecast" type="date"></div>
  </div>
  <div class="buttons">
@@ -210,6 +211,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="progress-meta"><span id="progressText">0%</span><span id="remaining">Осталось: --</span></div>
  <div style="margin-top:10px">
   <div class="row"><span>Период</span><span id="period">--</span></div>
+  <div class="row"><span>Фактическое списание</span><span id="signoffStatus">--</span></div>
   <div class="row"><span>Прошло оплачиваемого времени</span><span id="elapsed">0 дн. 00:00:00</span></div>
   <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
  </div>
@@ -345,12 +347,13 @@ function initDates(){
  $("start").value=localInput(now);
  let end=new Date(now);end.setMonth(end.getMonth()+4);
  $("end").value=localInput(end);
+ $("signoff").value=localInput(end);
  let f=new Date(now);f.setDate(f.getDate()+30);
  $("forecast").value=localInput(f);
 }
 function save(){
  localStorage.setItem("salaryTracker",JSON.stringify({
-  salary:$("salary").value,start:$("start").value,end:$("end").value,forecast:$("forecast").value,
+  salary:$("salary").value,start:$("start").value,end:$("end").value,signoff:$("signoff").value,forecast:$("forecast").value,
   sleepStart:$("sleepStart").value,sleepEnd:$("sleepEnd").value
  }));
 }
@@ -359,7 +362,7 @@ function load(){
  if(!x){initDates();return}
  try{
   x=JSON.parse(x);
-  ["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(k=>{
+  ["salary","start","end","signoff","forecast","sleepStart","sleepEnd"].forEach(k=>{
    if(x[k]!=null){
      $(k).value=(["start","end","forecast"].includes(k) && String(x[k]).includes("T"))
        ? String(x[k]).slice(0,10)
@@ -436,7 +439,7 @@ async function loadRates(){
   renderTicker();
   update();
 }
-function updateOvertime(end,now,salary){
+function updateOvertime(end,signoff,now,salary){
  const card=$("overtimeCard");
  if(!end || now<=end){
   card.classList.add("inactive"); card.classList.remove("active");
@@ -447,11 +450,16 @@ function updateOvertime(end,now,salary){
   $("overtimeHour").textContent="$0.00";
   return 0;
  }
- card.classList.remove("inactive"); card.classList.add("active");
- const seconds=(now-end)/1000;
- const earned=paidAmountBetween(end,now,salary);
+ const overtimeEnd=signoff || now;
+ const effectiveNow=now<overtimeEnd?now:overtimeEnd;
+ const active=now<overtimeEnd;
+ card.classList.add(active?"active":"inactive");
+ card.classList.toggle("active",active);
+ card.classList.toggle("inactive",!active);
+ const seconds=Math.max(0,(effectiveNow-end)/1000);
+ const earned=paidAmountBetween(end,effectiveNow,salary);
  const dayRate=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
- $("overtimeStatus").textContent="CONTRACT ENDED • OVERTIME ACTIVE";
+ $("overtimeStatus").textContent=active?"CONTRACT ENDED • OVERTIME ACTIVE":"OVERTIME COMPLETED";
  $("overtimeTime").textContent=fmtDuration(seconds);
  $("overtimeEarn").textContent=fmtUSD(earned);
  $("overtimeDay").textContent=fmtUSD(dayRate);
@@ -459,11 +467,11 @@ function updateOvertime(end,now,salary){
  return earned;
 }
 function update(){
- let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), now=new Date();
+ let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=paidAmountBetween(start,now,salary);
- let overtimeEarned=updateOvertime(end,now,salary);
+ let overtimeEarned=updateOvertime(end,signoff,now,salary);
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
 $("sec").textContent=fmtUSD(currentPerSec);
@@ -475,6 +483,7 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
  if(start){
   $("elapsed").textContent=fmtDuration(paidBetween(start,now));
   $("period").textContent=start.toLocaleDateString("ru-RU")+" → "+(end?end.toLocaleDateString("ru-RU"):"—");
+  $("signoffStatus").textContent=signoff?signoff.toLocaleDateString("ru-RU"):"Не указано";
  }
  if(end&&start){
   let all=(end-start)/1000, done=Math.max(0,Math.min(all,(now-start)/1000));
@@ -521,7 +530,7 @@ function updateSleep(perSec){
 }
 ["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");initDates();$("salary").value=5100;update()};
-$("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);update()};
+$("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
