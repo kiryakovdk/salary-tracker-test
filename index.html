@@ -271,6 +271,8 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div id="historyList">
   <div class="small">Завершённых контрактов пока нет.</div>
  </div>
+ <button id="testContract" class="secondary" type="button" style="margin-top:12px;width:100%">TEST CONTRACT</button>
+ <button id="clearTestHistory" class="secondary" type="button" style="margin-top:8px;width:100%">CLEAR TEST HISTORY</button>
  <div class="row" style="margin-top:10px">
   <span>Всего контрактов</span><span id="historyCount">0</span>
  </div>
@@ -549,6 +551,48 @@ function archiveCompletedContract(start,end,signoff,salary){
  renderHistory();
 }
 
+
+function createTestContract(){
+ const salary=5100;
+ const start=new Date(2026,0,1,0,0,0);
+ const end=new Date(2026,0,10,0,0,0);
+ const signoff=new Date(2026,0,12,0,0,0);
+
+ const key=["TEST",start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
+ const history=getHistory();
+
+ if(history.some(x=>x.key===key)){
+  renderHistory();
+  return;
+ }
+
+ const contract=totalPaidContract(start,end,salary);
+ const overtime=paidAmountBetween(end,signoff,salary);
+
+ history.push({
+  key,
+  test:true,
+  start:start.toLocaleDateString("ru-RU"),
+  end:end.toLocaleDateString("ru-RU"),
+  signoff:signoff.toLocaleDateString("ru-RU"),
+  salary,
+  contract,
+  overtime,
+  overtimeTime:fmtDuration((signoff-end)/1000),
+  total:contract+overtime
+ });
+
+ saveHistory(history);
+ renderHistory();
+}
+
+
+function clearTestHistory(){
+ const history=getHistory().filter(x=>!x.test);
+ saveHistory(history);
+ renderHistory();
+}
+
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
@@ -619,7 +663,7 @@ $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("fore
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
-load();renderHistory();loadRates();update();setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
+load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
 </script>
 </body>
 </html>
