@@ -452,8 +452,7 @@ function updateOvertime(end,signoff,now,salary){
  }
  const overtimeEnd=signoff || now;
  const effectiveNow=now<overtimeEnd?now:overtimeEnd;
- const active=now<overtimeEnd;
- card.classList.add(active?"active":"inactive");
+ const active=!signoff || now<overtimeEnd;
  card.classList.toggle("active",active);
  card.classList.toggle("inactive",!active);
  const seconds=Math.max(0,(effectiveNow-end)/1000);
