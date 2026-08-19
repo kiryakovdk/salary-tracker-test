@@ -150,6 +150,15 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
 .overtime-card.active .section-title{color:var(--green)}
+.history-item{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:13px;margin-top:9px}
+.history-item:first-child{margin-top:0}
+.history-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.history-title{font-weight:700;font-size:13px}
+.history-date{font-size:11px;color:var(--muted)}
+.history-total{font-size:20px;font-weight:750;color:var(--green);margin-top:7px;font-variant-numeric:tabular-nums}
+.history-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.history-cell{font-size:11px;color:var(--muted)}
+.history-cell b{display:block;color:var(--text);font-size:12px;margin-top:2px}
 .forecast{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .bigbox{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:16px}
 .bigbox b{display:block;font-size:25px;margin-top:4px;font-variant-numeric:tabular-nums}
@@ -254,6 +263,20 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="bigbox"><div class="small">Контракт + переработка</div><b id="totalEarned">$0.00</b></div>
  <div class="row" style="margin-top:10px"><span>Контракт</span><span id="totalContract">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="totalOvertime">$0.00</span></div>
+</div>
+
+
+<div class="card" id="historyCard">
+ <div class="section-title">CONTRACT HISTORY</div>
+ <div id="historyList">
+  <div class="small">Завершённых контрактов пока нет.</div>
+ </div>
+ <div class="row" style="margin-top:10px">
+  <span>Всего контрактов</span><span id="historyCount">0</span>
+ </div>
+ <div class="row">
+  <span>Всего заработано</span><span id="historyTotal">$0.00</span>
+ </div>
 </div>
 
 <div class="card">
@@ -465,12 +488,74 @@ function updateOvertime(end,signoff,now,salary){
  $("overtimeHour").textContent=fmtUSD(dayRate/24);
  return earned;
 }
+
+function getHistory(){
+ try{
+  const x=JSON.parse(localStorage.getItem("salaryTrackerHistory")||"[]");
+  return Array.isArray(x)?x:[];
+ }catch(e){return []}
+}
+function saveHistory(history){
+ localStorage.setItem("salaryTrackerHistory",JSON.stringify(history));
+}
+function renderHistory(){
+ const history=getHistory();
+ const list=$("historyList");
+ $("historyCount").textContent=history.length;
+ const total=history.reduce((sum,x)=>sum+(Number(x.total)||0),0);
+ $("historyTotal").textContent=fmtUSD(total);
+
+ if(!history.length){
+  list.innerHTML='<div class="small">Завершённых контрактов пока нет.</div>';
+  return;
+ }
+
+ list.innerHTML=history.slice().reverse().map((x,i)=>`
+  <div class="history-item">
+   <div class="history-head">
+    <div class="history-title">Contract #${history.length-i}</div>
+    <div class="history-date">${x.start} → ${x.signoff}</div>
+   </div>
+   <div class="history-total">${fmtUSD(x.total)}</div>
+   <div class="history-grid">
+    <div class="history-cell">Salary<b>${fmtUSD(x.salary)}</b></div>
+    <div class="history-cell">Contract earnings<b>${fmtUSD(x.contract)}</b></div>
+    <div class="history-cell">Overtime<b>${fmtUSD(x.overtime)}</b></div>
+    <div class="history-cell">Time after contract<b>${x.overtimeTime}</b></div>
+   </div>
+  </div>
+ `).join("");
+}
+function archiveCompletedContract(start,end,signoff,salary){
+ if(!start||!end||!signoff||signoff<=end||signoff>new Date()) return;
+ const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
+ const history=getHistory();
+ if(history.some(x=>x.key===key)) return;
+
+ const contract=totalPaidContract(start,end,salary);
+ const overtime=paidAmountBetween(end,signoff,salary);
+ history.push({
+  key,
+  start:start.toLocaleDateString("ru-RU"),
+  end:end.toLocaleDateString("ru-RU"),
+  signoff:signoff.toLocaleDateString("ru-RU"),
+  salary,
+  contract,
+  overtime,
+  overtimeTime:fmtDuration((signoff-end)/1000),
+  total:contract+overtime
+ });
+ saveHistory(history);
+ renderHistory();
+}
+
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=paidAmountBetween(start,now,salary);
- let overtimeEarned=updateOvertime(end,signoff,now,salary);
+ let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
+
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
 $("sec").textContent=fmtUSD(currentPerSec);
@@ -534,7 +619,7 @@ $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("fore
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
-load();loadRates();update();setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
+load();renderHistory();loadRates();update();setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
 </script>
 </body>
 </html>
