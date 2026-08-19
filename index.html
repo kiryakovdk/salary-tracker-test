@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.2</title>
+<title>Salary Tracker v0.8.3</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -150,13 +150,12 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
 .overtime-card.active .section-title{color:var(--green)}
-.app-version{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.3px;padding:14px 0 18px;opacity:.8}
-.chart-wrap{position:relative;width:100%;height:220px;margin-top:8px}
-#salaryChartSvg{display:block;width:100%;height:100%;overflow:visible}
+.salary-graph{width:100%;height:220px;margin-top:8px;overflow:hidden}
+.salary-graph svg{display:block;width:100%;height:100%}
 .chart-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
 .chart-legend span{display:inline-flex;align-items:center;gap:5px}
 .legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green)}
-.chart-tooltip{position:absolute;pointer-events:none;z-index:5;background:#10171c;border:1px solid #2a363e;border-radius:9px;padding:8px 10px;font-size:11px;line-height:1.45;box-shadow:0 8px 20px rgba(0,0,0,.35);display:none;white-space:nowrap}
+.app-version{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.3px;padding:14px 0 18px;opacity:.8}
 .total-earned-row{margin-top:9px;padding-top:9px;border-top:1px solid #263139;font-weight:750}
 .total-earned-row span:last-child{font-size:16px;color:var(--green);font-variant-numeric:tabular-nums}
 .history-item{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:13px;margin-top:9px}
@@ -270,9 +269,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 
 <div class="card" id="salaryGraphCard">
  <div class="section-title">SALARY PROGRESS</div>
- <div class="chart-wrap">
-  <canvas id="salaryChart" aria-label="График накопленного заработка"></canvas>
- </div>
+ <div id="salaryGraph" class="salary-graph"></div>
  <div class="chart-legend">
   <span><i class="legend-dot"></i> Заработано</span>
   <span id="chartEndLabel">Contract End: --</span>
@@ -635,150 +632,60 @@ function clearTestHistory(){
 }
 
 
-function buildSalaryChart(start,end,signoff,now,salary){
- const placeholder=$("salaryChart");
- const wrap=placeholder ? placeholder.parentElement : $("salaryChartSvg")?.parentElement;
- if(!wrap) return;
-
- let svg=$("salaryChartSvg");
- if(!svg){
-  if(placeholder) placeholder.remove();
-  svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
-  svg.id="salaryChartSvg";
-  svg.setAttribute("role","img");
-  svg.setAttribute("aria-label","График накопленного заработка");
-  wrap.appendChild(svg);
- }
-
- const w=Math.max(280,wrap.clientWidth||320);
- const h=Math.max(190,wrap.clientHeight||220);
- svg.setAttribute("viewBox",`0 0 ${w} ${h}`);
- svg.setAttribute("width",w);
- svg.setAttribute("height",h);
- svg.innerHTML="";
-
+function renderSalaryGraph(start,end,signoff,now,salary){
+ const box=document.getElementById("salaryGraph");
+ if(!box) return;
  if(!start || !end || !salary){
-  const t=document.createElementNS("http://www.w3.org/2000/svg","text");
-  t.setAttribute("x","14"); t.setAttribute("y","28");
-  t.setAttribute("fill","#7f8a92"); t.setAttribute("font-size","12");
-  t.textContent="Укажи зарплату и даты контракта";
-  svg.appendChild(t);
+  box.innerHTML='<div class="small" style="padding:12px">Укажи даты контракта и зарплату</div>';
   return;
  }
-
- const first=start.getTime();
- const requestedEnd=signoff && signoff>end ? signoff : now;
- const last=Math.max(end.getTime(),requestedEnd.getTime());
+ const lastDate=signoff&&signoff>end?signoff:now;
+ const first=start.getTime(), last=Math.max(end.getTime(),lastDate.getTime());
  const span=Math.max(1,last-first);
-
- const points=[];
+ const pts=[];
  const day=86400000;
  for(let t=first;t<=last;t+=day){
-  const dt=new Date(t);
-  const value=dt<=end
-   ? totalPaidContract(start,dt,salary)
-   : totalPaidContract(start,end,salary)+paidAmountBetween(end,dt,salary);
-  points.push({t,value});
+  const d=new Date(t);
+  const v=d<=end?totalPaidContract(start,d,salary):totalPaidContract(start,end,salary)+paidAmountBetween(end,d,salary);
+  pts.push([t,v]);
  }
- const add=(dt)=>{
-  if(!dt) return;
-  const t=dt.getTime();
-  if(t<first||t>last) return;
-  const value=dt<=end
-   ? totalPaidContract(start,dt,salary)
-   : totalPaidContract(start,end,salary)+paidAmountBetween(end,dt,salary);
-  if(!points.some(p=>p.t===t)) points.push({t,value});
- };
- add(end); add(signoff); add(now);
- points.sort((a,b)=>a.t-b.t);
+ [[start.getTime(),totalPaidContract(start,start,salary)],
+  [end.getTime(),totalPaidContract(start,end,salary)],
+  ...(signoff&&signoff.getTime()>end.getTime()?[[signoff.getTime(),totalPaidContract(start,end,salary)+paidAmountBetween(end,signoff,salary)]]:[])
+ ].forEach(p=>{if(p[0]>=first&&p[0]<=last&&!pts.some(x=>x[0]===p[0]))pts.push(p)});
+ pts.sort((a,b)=>a[0]-b[0]);
 
- const max=Math.max(1,...points.map(p=>p.value));
- const top=Math.max(100,Math.ceil(max/1000)*1000);
- const L=46,R=12,T=12,B=30;
- const pw=w-L-R, ph=h-T-B;
- const X=t=>L+(t-first)/span*pw;
- const Y=v=T+ph-(v/top)*ph;
-
+ const w=Math.max(280,box.clientWidth||320),h=220,L=44,R=10,T=12,B=28;
+ const pw=w-L-R,ph=h-T-B,max=Math.max(1,...pts.map(p=>p[1])),yMax=Math.ceil(max/1000)*1000||1000;
+ const X=t=>L+(t-first)/span*pw, Y=v=>T+ph-(v/yMax)*ph;
  const ns="http://www.w3.org/2000/svg";
- const line=(x1,y1,x2,y2,stroke="#202a30",dash="")=>{
-  const el=document.createElementNS(ns,"line");
-  el.setAttribute("x1",x1);el.setAttribute("y1",y1);
-  el.setAttribute("x2",x2);el.setAttribute("y2",y2);
-  el.setAttribute("stroke",stroke);el.setAttribute("stroke-width","1");
-  if(dash) el.setAttribute("stroke-dasharray",dash);
-  svg.appendChild(el);
- };
-
- // Grid and Y labels.
+ let s=`<svg viewBox="0 0 ${w} ${h}" xmlns="${ns}" aria-label="Salary progress">`;
  for(let i=0;i<=4;i++){
-  const yy=T+ph*i/4;
-  line(L,yy,w-R,yy);
-  const tx=document.createElementNS(ns,"text");
-  tx.setAttribute("x",4);tx.setAttribute("y",yy+4);
-  tx.setAttribute("fill","#7f8a92");tx.setAttribute("font-size","10");
-  tx.textContent=fmtCompactMoney(top*(1-i/4));
-  svg.appendChild(tx);
+  const y=T+ph*i/4, val=yMax*(1-i/4);
+  s+=`<line x1="${L}" y1="${y}" x2="${w-R}" y2="${y}" stroke="#202a30"/>`;
+  s+=`<text x="3" y="${y+4}" fill="#7f8a92" font-size="10">$${Math.round(val/1000)}k</text>`;
  }
-
- // Contract End / Sign-off markers.
- const endX=X(end.getTime());
- line(endX,T,endX,T+ph,"#65727a","4 4");
- if(signoff && signoff.getTime()>end.getTime() && signoff.getTime()<=last){
-  const sx=X(signoff.getTime());
-  line(sx,T,sx,T+ph,"#8a949b","3 4");
- }
-
- // Main line.
- const poly=document.createElementNS(ns,"polyline");
- poly.setAttribute("fill","none");
- poly.setAttribute("stroke",getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a");
- poly.setAttribute("stroke-width","2.5");
- poly.setAttribute("stroke-linecap","round");
- poly.setAttribute("stroke-linejoin","round");
- poly.setAttribute("points",points.map(p=>`${X(p.t)},${Y(p.value)}`).join(" "));
- svg.appendChild(poly);
-
- // Important points.
- [start,end,signoff].forEach(dt=>{
-  if(!dt) return;
-  const p=points.find(x=>x.t===dt.getTime());
-  if(!p) return;
-  const c=document.createElementNS(ns,"circle");
-  c.setAttribute("cx",X(p.t));c.setAttribute("cy",Y(p.value));c.setAttribute("r","4");
-  c.setAttribute("fill","#0b1013");c.setAttribute("stroke",getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a");c.setAttribute("stroke-width","2");
-  svg.appendChild(c);
+ s+=`<line x1="${X(end.getTime())}" y1="${T}" x2="${X(end.getTime())}" y2="${T+ph}" stroke="#65727a" stroke-dasharray="4 4"/>`;
+ if(signoff&&signoff.getTime()>end.getTime()&&signoff.getTime()<=last)
+  s+=`<line x1="${X(signoff.getTime())}" y1="${T}" x2="${X(signoff.getTime())}" y2="${T+ph}" stroke="#8a949b" stroke-dasharray="3 4"/>`;
+ const points=pts.map(p=>`${X(p[0])},${Y(p[1])}`).join(" ");
+ s+=`<polyline points="${points}" fill="none" stroke="#65d18a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+ [[start,"Start"],[end,"Contract End"],...(signoff&&signoff.getTime()!=end.getTime()?[[signoff,"Sign-off"]]:[])].forEach(a=>{
+  const p=pts.find(x=>x[0]===a[0].getTime()); if(!p)return;
+  s+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="#0b1013" stroke="#65d18a" stroke-width="2"/>`;
+  s+=`<text x="${X(p[0])}" y="${h-7}" fill="#7f8a92" font-size="10" text-anchor="middle">${a[1]}</text>`;
  });
-
- // Labels.
- const labels=[
-  {dt:start,text:"Start"},
-  {dt:end,text:"Contract End"},
-  ...(signoff && signoff.getTime()!==end.getTime()?[{dt:signoff,text:"Sign-off"}]:[])
- ];
- labels.forEach(item=>{
-  const tx=document.createElementNS(ns,"text");
-  tx.setAttribute("x",Math.max(L,Math.min(w-R,X(item.dt.getTime()))));
-  tx.setAttribute("y",h-8);
-  tx.setAttribute("fill","#7f8a92");tx.setAttribute("font-size","10");
-  tx.setAttribute("text-anchor","middle");
-  tx.textContent=item.text;
-  svg.appendChild(tx);
- });
+ s+="</svg>";
+ box.innerHTML=s;
+ $("chartEndLabel").textContent="Contract End: "+end.toLocaleDateString("ru-RU");
+ $("chartSignoffLabel").textContent="Sign-off: "+(signoff?signoff.toLocaleDateString("ru-RU"):"--");
 }
-
-function fmtCompactMoney(v){
- if(v>=1000000) return "$"+(v/1000000).toFixed(1)+"M";
- if(v>=1000) return "$"+(v/1000).toFixed(v>=10000?0:1)+"k";
- return "$"+Math.round(v);
-}
-
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=paidAmountBetween(start,now,salary);
- let overtimeEarned=updateOvertime(end,signoff,now,salary);
- buildSalaryChart(start,end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
+ let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
 
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
@@ -801,8 +708,6 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
  $("contractTotalEarned").textContent=fmtUSD(totalPaidContract(start,end,salary)+overtimeEarned);
- $("chartEndLabel").textContent="Contract End: "+(end?end.toLocaleDateString("ru-RU"):"--");
- $("chartSignoffLabel").textContent="Sign-off: "+(signoff?signoff.toLocaleDateString("ru-RU"):"--");
  } else {
   $("contractTotalEarned").textContent=fmtUSD(overtimeEarned);
  }
@@ -828,8 +733,8 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("forecastLeft").textContent=fmtUSD(Math.max(0,fe-earned));
  }
  updateSleep(currentPerSec);
- try{buildSalaryChart(start,end,signoff,now,salary);}catch(e){console.error("Salary graph:",e);}
  save();
+ try{renderSalaryGraph(start,end,signoff,now,salary);}catch(e){console.error(e);}
 }
 function updateSleep(perSec){
  let ss=$("sleepStart").value,se=$("sleepEnd").value;if(!ss||!se)return;
@@ -839,17 +744,15 @@ function updateSleep(perSec){
  if(b<=a)b.setDate(b.getDate()+1);
  let sec=paidBetween(a,b);$("sleepEarn").textContent=fmtUSD(sec*perSec);
 }
-["salary","start","end","signoff","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
+["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
-load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
-let salaryChartResizeHandler;
-window.addEventListener("resize",()=>{clearTimeout(salaryChartResizeHandler);salaryChartResizeHandler=setTimeout(()=>update(),120)});
+load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.2 • Build 2026-08-19</div>
+<div class="app-version">Salary Tracker • v0.8.3 • Build 2026-08-19</div>
 </body>
 </html>
