@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.6</title>
+<title>Salary Tracker v0.8.7</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -155,6 +155,20 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .chart-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
 .chart-legend span{display:inline-flex;align-items:center;gap:5px}
 .legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+.woa-entry{border:1px solid #202a30;border-radius:10px;padding:12px;margin-top:10px;background:#0b1013}
+.woa-entry-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.woa-entry-title{font-size:12px;font-weight:700;letter-spacing:.4px}
+.woa-remove{border:0;background:transparent;color:#8b969d;font-size:18px;line-height:1;cursor:pointer}
+.woa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.woa-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.woa-stat{border:1px solid #202a30;border-radius:8px;padding:8px}
+.woa-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase}
+.woa-stat-value{font-size:13px;margin-top:3px}
+.woa-actions{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.woa-total{margin-top:12px;padding-top:10px;border-top:1px solid #202a30}
+.woa-total-row{display:flex;justify-content:space-between;margin:4px 0}
+.woa-total-row strong{font-size:15px}
 .app-version{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.3px;padding:14px 0 18px;opacity:.8}
 .total-earned-row{margin-top:9px;padding-top:9px;border-top:1px solid #263139;font-weight:750}
 .total-earned-row span:last-child{font-size:16px;color:var(--green);font-variant-numeric:tabular-nums}
@@ -265,6 +279,25 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
  <div class="row" style="margin-top:10px"><span>В день</span><span id="overtimeDay">$0.00</span></div>
  <div class="row"><span>В час</span><span id="overtimeHour">$0.00</span></div>
+</div>
+
+
+<div class="card" id="woaCard">
+ <div class="section-title">WARLIKE OPERATIONS AREA</div>
+ <div class="field">
+  <label>Basic Wage / month</label>
+  <input id="woaBasicWage" type="number" min="0" step="0.01" placeholder="0">
+ </div>
+ <div id="woaEntries"></div>
+ <div class="woa-actions">
+  <button class="secondary" type="button" id="addWoaBtn">+ Add WOA Entry</button>
+  <span class="small" id="woaCount">0 entries</span>
+ </div>
+ <div class="woa-total">
+  <div class="woa-total-row"><span>Actual WOA</span><span id="woaActualDays">0 days</span></div>
+  <div class="woa-total-row"><span>Paid WOA</span><span id="woaPaidDays">0 days</span></div>
+  <div class="woa-total-row"><strong>Basic Wage earned</strong><strong id="woaEarned">$0.00</strong></div>
+ </div>
 </div>
 
 <div class="card" id="salaryGraphCard">
@@ -470,7 +503,8 @@ async function loadRates(){
       $("rubRate").textContent="1 USD = ₽"+usd.toFixed(4);
       $("eurRate").textContent="1 EUR = ₽"+eur.toFixed(4);
       renderTicker();
-      update();
+      initWoa();
+update();
       return;
     }catch(e){}
   }
@@ -634,6 +668,128 @@ function clearTestHistory(){
 
 
 
+
+/* ---------- WOA / Warlike Operations Area ---------- */
+const WOA_MIN_DAYS=5;
+const WOA_STORAGE_KEY="salaryTrackerWoaEntries";
+const WOA_WAGE_KEY="salaryTrackerWoaBasicWage";
+
+function getWoaEntries(){
+ try{
+  const raw=localStorage.getItem(WOA_STORAGE_KEY);
+  const arr=raw?JSON.parse(raw):[];
+  return Array.isArray(arr)?arr:[];
+ }catch(e){return []}
+}
+function saveWoaEntries(entries){localStorage.setItem(WOA_STORAGE_KEY,JSON.stringify(entries))}
+function woaDate(v){
+ if(!v)return null;
+ const d=new Date(v+"T00:00:00");
+ return isNaN(d.getTime())?null:d;
+}
+function woaActualDays(start,end){
+ if(!start||!end||end<start)return 0;
+ return Math.max(0,(end-start)/86400000);
+}
+function calcWoaEntry(entry,monthly){
+ const s=woaDate(entry.start),e=woaDate(entry.end);
+ if(!s||!e||e<s||monthly<=0)return {actual:0,paid:0,earned:0};
+ const actual=woaActualDays(s,e);
+ const paid=Math.max(actual,WOA_MIN_DAYS);
+ // Basic Wage is monthly. Use a 30-day month for the WOA premium.
+ return {actual,paid,earned:paid*(monthly/30)};
+}
+function validateWoaEntries(entries){
+ const v=entries.map((x,i)=>({i,s:woaDate(x.start),e:woaDate(x.end)}))
+  .filter(x=>x.s&&x.e&&x.e>=x.s).sort((a,b)=>a.s-b.s);
+ for(let i=1;i<v.length;i++){
+  if(v[i].s<v[i-1].e)return {ok:false,a:v[i-1].i+1,b:v[i].i+1};
+ }
+ return {ok:true};
+}
+function getWoaEarned(){
+ const entries=getWoaEntries();
+ const monthly=parseFloat($("woaBasicWage")?.value)||0;
+ if(!validateWoaEntries(entries).ok)return 0;
+ return entries.reduce((s,e)=>s+calcWoaEntry(e,monthly).earned,0);
+}
+function formatWoaDays(v){
+ const n=Math.round(v*100)/100;
+ return Number.isInteger(n)?String(n):n.toFixed(2);
+}
+function renderWoa(){
+ const c=$("woaEntries"); if(!c)return;
+ const entries=getWoaEntries(),monthly=parseFloat($("woaBasicWage")?.value)||0;
+ c.innerHTML="";
+ let actual=0,paid=0,earned=0;
+ entries.forEach((entry,i)=>{
+  const x=calcWoaEntry(entry,monthly);
+  actual+=x.actual;paid+=x.paid;earned+=x.earned;
+  const el=document.createElement("div");
+  el.className="woa-entry";
+  el.innerHTML=`
+   <div class="woa-entry-head">
+    <span class="woa-entry-title">WOA #${i+1}</span>
+    <button class="woa-remove" type="button" data-woa-remove="${i}">×</button>
+   </div>
+   <div class="woa-grid">
+    <div class="field"><label>Start</label><input type="date" data-woa-start="${i}" value="${entry.start||""}"></div>
+    <div class="field"><la
+ let woaEarned=getWoaEarned();bel>End</label><input type="date" data-woa-end="${i}" value="${entry.end||""}"></div>
+   </div>
+   <div class="woa-meta">
+    <div class="woa-stat"><div class="woa-stat-label">Actual</div><div class="woa-stat-value">${formatWoaDays(x.actual)} days</div></div>
+    <div class="woa-stat"><div class="woa-stat-label">Paid</div><div class="woa-stat-value">${formatWoaDays(x.paid)} days</div></div>
+   </div>
+   <div class="small" style="margin-top:8px">Basic Wage: $${x.earned.toFixed(2)}</div>`;
+  c.appendChild(el);
+ });
+ $("woaCount").textContent=`${entries.length} ${entries.length===1?"entry":"entries"}`;
+ $("woaActualDays").textContent=`${formatWoaDays(actual)} days`;
+ $("woaPaidDays").textContent=`${formatWoaDays(paid)} days`;
+ $("woaEarned").textContent=fmtUSD(earned);
+ let w=$("woaOverlapWarning");
+ if(!w){
+  w=document.createElement("div");w.id="woaOverlapWarning";w.className="small";
+  w.style.marginTop="8px";c.parentElement.appendChild(w);
+ }
+ const check=validateWoaEntries(entries);
+ w.textContent=check.ok?"":"⚠️ WOA entries #"+check.a+" and #"+check.b+" overlap. Fix the dates to avoid double payment.";
+ w.style.color=check.ok?"":"#e6a45b";
+}
+function initWoa(){
+ const wage=$("woaBasicWage");
+ if(wage){
+  const saved=localStorage.getItem(WOA_WAGE_KEY);
+  if(saved!==null)wage.value=saved;
+  wage.addEventListener("input",()=>{
+   localStorage.setItem(WOA_WAGE_KEY,wage.value);renderWoa();try{update()}catch(e){}
+  });
+ }
+ const add=$("addWoaBtn");
+ if(add)add.addEventListener("click",()=>{
+  const a=getWoaEntries();a.push({start:"",end:""});saveWoaEntries(a);renderWoa();
+ });
+ const c=$("woaEntries");
+ if(c){
+  c.addEventListener("change",ev=>{
+   const t=ev.target,si=t.getAttribute("data-woa-start"),ei=t.getAttribute("data-woa-end");
+   if(si===null&&ei===null)return;
+   const a=getWoaEntries(),i=si!==null?Number(si):Number(ei);
+   if(!a[i])return;
+   if(si!==null)a[i].start=t.value;if(ei!==null)a[i].end=t.value;
+   const check=validateWoaEntries(a);
+   if(!check.ok){alert("WOA periods cannot overlap. Please correct the dates.");}
+   saveWoaEntries(a);renderWoa();try{update()}catch(e){}
+  });
+  c.addEventListener("click",ev=>{
+   const b=ev.target.closest("[data-woa-remove]");if(!b)return;
+   const a=getWoaEntries();a.splice(Number(b.getAttribute("data-woa-remove")),1);
+   saveWoaEntries(a);renderWoa();try{update()}catch(e){}
+  });
+ }
+ renderWoa();
+}
 function earnedAtDate(date,start,end,signoff,now,salary){
  if(!date || !start || !salary) return 0;
 
@@ -760,7 +916,7 @@ function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
- let earned=paidAmountBetween(start,now,salary);
+ let earned=paidAmountBetween(start,now,salary)+woaEarned;
  let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
 
  $("usd").textContent=fmtUSD(earned);
@@ -829,6 +985,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.6 • Build 2026-08-19</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20</div>
 </body>
 </html>
