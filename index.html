@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker</title>
+<title>Salary Tracker v0.8.1</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -150,6 +150,7 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
 .overtime-card.active .section-title{color:var(--green)}
+.app-version{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.3px;padding:14px 0 18px;opacity:.8}
 .chart-wrap{position:relative;width:100%;height:220px;margin-top:8px}
 #salaryChartSvg{display:block;width:100%;height:100%;overflow:visible}
 .chart-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
@@ -635,13 +636,13 @@ function clearTestHistory(){
 
 
 function buildSalaryChart(start,end,signoff,now,salary){
- const wrap=$("salaryChart")?.parentElement;
+ const placeholder=$("salaryChart");
+ const wrap=placeholder ? placeholder.parentElement : $("salaryChartSvg")?.parentElement;
  if(!wrap) return;
 
  let svg=$("salaryChartSvg");
  if(!svg){
-  const canvas=$("salaryChart");
-  if(canvas) canvas.remove();
+  if(placeholder) placeholder.remove();
   svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
   svg.id="salaryChartSvg";
   svg.setAttribute("role","img");
@@ -848,5 +849,6 @@ load();renderHistory();loadRates();update();$("testContract").addEventListener("
 let salaryChartResizeHandler;
 window.addEventListener("resize",()=>{clearTimeout(salaryChartResizeHandler);salaryChartResizeHandler=setTimeout(()=>update(),120)});
 </script>
+<div class="app-version">Salary Tracker • v0.8.1 • Build 2026-08-19</div>
 </body>
 </html>
