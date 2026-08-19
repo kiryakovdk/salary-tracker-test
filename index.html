@@ -151,7 +151,7 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .overtime-card.active{border-color:#24543f}
 .overtime-card.active .section-title{color:var(--green)}
 .chart-wrap{position:relative;width:100%;height:220px;margin-top:8px}
-#salaryChart{display:block;width:100%;height:100%;touch-action:none}
+#salaryChartSvg{display:block;width:100%;height:100%;overflow:visible}
 .chart-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--muted)}
 .chart-legend span{display:inline-flex;align-items:center;gap:5px}
 .legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green)}
@@ -635,120 +635,149 @@ function clearTestHistory(){
 
 
 function buildSalaryChart(start,end,signoff,now,salary){
- const canvas=$("salaryChart");
- if(!canvas) return;
- const wrap=canvas.parentElement;
- const dpr=window.devicePixelRatio||1;
- const w=Math.max(300,wrap.clientWidth),h=Math.max(180,wrap.clientHeight);
- canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
- const ctx=canvas.getContext("2d");
- ctx.setTransform(dpr,0,0,dpr,0,0);
- ctx.clearRect(0,0,w,h);
+ const wrap=$("salaryChart")?.parentElement;
+ if(!wrap) return;
 
- if(!start||!end){
-  ctx.fillStyle="#7f8a92"; ctx.font="12px system-ui";
-  ctx.fillText("Укажи даты контракта",14,28);
+ let svg=$("salaryChartSvg");
+ if(!svg){
+  const canvas=$("salaryChart");
+  if(canvas) canvas.remove();
+  svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.id="salaryChartSvg";
+  svg.setAttribute("role","img");
+  svg.setAttribute("aria-label","График накопленного заработка");
+  wrap.appendChild(svg);
+ }
+
+ const w=Math.max(280,wrap.clientWidth||320);
+ const h=Math.max(190,wrap.clientHeight||220);
+ svg.setAttribute("viewBox",`0 0 ${w} ${h}`);
+ svg.setAttribute("width",w);
+ svg.setAttribute("height",h);
+ svg.innerHTML="";
+
+ if(!start || !end || !salary){
+  const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+  t.setAttribute("x","14"); t.setAttribute("y","28");
+  t.setAttribute("fill","#7f8a92"); t.setAttribute("font-size","12");
+  t.textContent="Укажи зарплату и даты контракта";
+  svg.appendChild(t);
   return;
  }
 
- const chartEnd=signoff && signoff> end ? signoff : Math.max(now,end);
- const last=Math.max(chartEnd.getTime(),end.getTime());
  const first=start.getTime();
+ const requestedEnd=signoff && signoff>end ? signoff : now;
+ const last=Math.max(end.getTime(),requestedEnd.getTime());
  const span=Math.max(1,last-first);
- const points=[];
- const dayMs=86400000;
 
- // One point per day, plus exact end/sign-off/now points.
- for(let t=first;t<=last;t+=dayMs){
+ const points=[];
+ const day=86400000;
+ for(let t=first;t<=last;t+=day){
   const dt=new Date(t);
-  const capped=new Date(Math.min(t,last));
-  const amount=dt<=end ? totalPaidContract(start,dt,salary) : totalPaidContract(start,end,salary)+paidAmountBetween(end,capped,salary);
-  points.push({t,dt,amount});
+  const value=dt<=end
+   ? totalPaidContract(start,dt,salary)
+   : totalPaidContract(start,end,salary)+paidAmountBetween(end,dt,salary);
+  points.push({t,value});
  }
- const addPoint=(dt)=>{
+ const add=(dt)=>{
   if(!dt) return;
   const t=dt.getTime();
   if(t<first||t>last) return;
-  const amount=dt<=end ? totalPaidContract(start,dt,salary) : totalPaidContract(start,end,salary)+paidAmountBetween(end,dt,salary);
-  points.push({t,dt,amount});
+  const value=dt<=end
+   ? totalPaidContract(start,dt,salary)
+   : totalPaidContract(start,end,salary)+paidAmountBetween(end,dt,salary);
+  if(!points.some(p=>p.t===t)) points.push({t,value});
  };
- addPoint(end);
- if(signoff) addPoint(signoff);
- if(now>=first && now<=last) addPoint(now);
+ add(end); add(signoff); add(now);
  points.sort((a,b)=>a.t-b.t);
- const unique=[];
- for(const p of points){ if(!unique.length||p.t!==unique[unique.length-1].t) unique.push(p); }
 
- const pad={l:46,r:12,t:14,b:30};
- const cw=w-pad.l-pad.r,ch=h-pad.t-pad.b;
- const maxVal=Math.max(1,...unique.map(p=>p.amount));
- const niceStep=maxVal<=5000?1000:maxVal<=20000?5000:10000;
- const yMax=Math.ceil(maxVal/niceStep)*niceStep;
+ const max=Math.max(1,...points.map(p=>p.value));
+ const top=Math.max(100,Math.ceil(max/1000)*1000);
+ const L=46,R=12,T=12,B=30;
+ const pw=w-L-R, ph=h-T-B;
+ const X=t=>L+(t-first)/span*pw;
+ const Y=v=T+ph-(v/top)*ph;
 
- ctx.strokeStyle="#1c252b"; ctx.lineWidth=1;
- ctx.font="10px system-ui"; ctx.fillStyle="#7f8a92";
+ const ns="http://www.w3.org/2000/svg";
+ const line=(x1,y1,x2,y2,stroke="#202a30",dash="")=>{
+  const el=document.createElementNS(ns,"line");
+  el.setAttribute("x1",x1);el.setAttribute("y1",y1);
+  el.setAttribute("x2",x2);el.setAttribute("y2",y2);
+  el.setAttribute("stroke",stroke);el.setAttribute("stroke-width","1");
+  if(dash) el.setAttribute("stroke-dasharray",dash);
+  svg.appendChild(el);
+ };
+
+ // Grid and Y labels.
  for(let i=0;i<=4;i++){
-  const y=pad.t+ch*i/4;
-  ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
-  const v=yMax*(1-i/4);
-  ctx.fillText(fmtCompactMoney(v),4,y+3);
+  const yy=T+ph*i/4;
+  line(L,yy,w-R,yy);
+  const tx=document.createElementNS(ns,"text");
+  tx.setAttribute("x",4);tx.setAttribute("y",yy+4);
+  tx.setAttribute("fill","#7f8a92");tx.setAttribute("font-size","10");
+  tx.textContent=fmtCompactMoney(top*(1-i/4));
+  svg.appendChild(tx);
  }
 
- const x=t=>pad.l+((t-first)/span)*cw;
- const y=v=>pad.t+ch-(v/yMax)*ch;
-
- // Contract end marker.
- const ex=x(end.getTime());
- ctx.save();
- ctx.setLineDash([4,4]);
- ctx.strokeStyle="#64717a";
- ctx.beginPath();ctx.moveTo(ex,pad.t);ctx.lineTo(ex,pad.t+ch);ctx.stroke();
- ctx.restore();
-
- if(signoff && signoff> end && signoff.getTime()<=last){
-  const sx=x(signoff.getTime());
-  ctx.save();ctx.setLineDash([3,4]);ctx.strokeStyle="#8a949b";
-  ctx.beginPath();ctx.moveTo(sx,pad.t);ctx.lineTo(sx,pad.t+ch);ctx.stroke();
-  ctx.restore();
+ // Contract End / Sign-off markers.
+ const endX=X(end.getTime());
+ line(endX,T,endX,T+ph,"#65727a","4 4");
+ if(signoff && signoff.getTime()>end.getTime() && signoff.getTime()<=last){
+  const sx=X(signoff.getTime());
+  line(sx,T,sx,T+ph,"#8a949b","3 4");
  }
 
- // Line.
- ctx.beginPath();
- unique.forEach((p,i)=>{const px=x(p.t),py=y(p.amount);i?ctx.lineTo(px,py):ctx.moveTo(px,py)});
- ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a";
- ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";ctx.stroke();
+ // Main line.
+ const poly=document.createElementNS(ns,"polyline");
+ poly.setAttribute("fill","none");
+ poly.setAttribute("stroke","var(--green)");
+ poly.setAttribute("stroke-width","2.5");
+ poly.setAttribute("stroke-linecap","round");
+ poly.setAttribute("stroke-linejoin","round");
+ poly.setAttribute("points",points.map(p=>`${X(p.t)},${Y(p.value)}`).join(" "));
+ svg.appendChild(poly);
 
- // Start/end dots.
- for(const p of unique){
-  if(p.t===start.getTime()||p.t===end.getTime()||(signoff&&p.t===signoff.getTime())){
-   ctx.fillStyle="#0b1013";ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--green").trim()||"#65d18a";
-   ctx.lineWidth=2;ctx.beginPath();ctx.arc(x(p.t),y(p.amount),4,0,Math.PI*2);ctx.fill();ctx.stroke();
-  }
- }
-
- // X-axis labels.
- const labels=[start,end];
- if(signoff && signoff.getTime()!==end.getTime()) labels.push(signoff);
- ctx.fillStyle="#7f8a92";ctx.font="10px system-ui";ctx.textAlign="center";
- labels.forEach((dt,i)=>{
-  const px=x(dt.getTime());
-  let label=i===0?"Start":dt.getTime()===end.getTime()?"Contract End":"Sign-off";
-  ctx.fillText(label,Math.max(pad.l,Math.min(w-pad.r,px)),h-8);
+ // Important points.
+ [start,end,signoff].forEach(dt=>{
+  if(!dt) return;
+  const p=points.find(x=>x.t===dt.getTime());
+  if(!p) return;
+  const c=document.createElementNS(ns,"circle");
+  c.setAttribute("cx",X(p.t));c.setAttribute("cy",Y(p.value));c.setAttribute("r","4");
+  c.setAttribute("fill","#0b1013");c.setAttribute("stroke","var(--green)");c.setAttribute("stroke-width","2");
+  svg.appendChild(c);
  });
- ctx.textAlign="left";
+
+ // Labels.
+ const labels=[
+  {dt:start,text:"Start"},
+  {dt:end,text:"Contract End"},
+  ...(signoff && signoff.getTime()!==end.getTime()?[{dt:signoff,text:"Sign-off"}]:[])
+ ];
+ labels.forEach(item=>{
+  const tx=document.createElementNS(ns,"text");
+  tx.setAttribute("x",Math.max(L,Math.min(w-R,X(item.dt.getTime()))));
+  tx.setAttribute("y",h-8);
+  tx.setAttribute("fill","#7f8a92");tx.setAttribute("font-size","10");
+  tx.setAttribute("text-anchor","middle");
+  tx.textContent=item.text;
+  svg.appendChild(tx);
+ });
 }
+
 function fmtCompactMoney(v){
  if(v>=1000000) return "$"+(v/1000000).toFixed(1)+"M";
  if(v>=1000) return "$"+(v/1000).toFixed(v>=10000?0:1)+"k";
  return "$"+Math.round(v);
 }
+
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=paidAmountBetween(start,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary);
- try{buildSalaryChart(start,end,signoff,now,salary);}catch(e){} archiveCompletedContract(start,end,signoff,salary);
+ buildSalaryChart(start,end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
 
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
