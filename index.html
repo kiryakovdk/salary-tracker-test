@@ -1063,9 +1063,7 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("progressText").textContent=pct.toFixed(1)+"%";
   $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
- $("contractTotalEarned").textContent=fmtUSD(totalPaidContract(start,end,salary)+overtimeEarned);
  } else {
-  $("contractTotalEarned").textContent=fmtUSD(overtimeEarned);
  }
  let is31=now.getDate()===31;
  $("day31").textContent=is31?"⏸ 31-е число не оплачивается":"✓ Оплачивается";
