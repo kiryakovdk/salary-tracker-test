@@ -260,7 +260,6 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <div class="row"><span>Фактическое списание</span><span id="signoffStatus">--</span></div>
   <div class="row"><span>Прошло оплачиваемого времени</span><span id="elapsed">0 дн. 00:00:00</span></div>
   <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
-  <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="contractTotalEarned">$0.00</span></div>
  </div>
 </div>
 
@@ -1110,6 +1109,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix15</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix16</div>
 </body>
 </html>
