@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.8 • fix22</title>
+<title>Salary Tracker v0.8.8 • fix23</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -152,7 +152,7 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .board-time-main{font-size:42px;font-weight:800;line-height:1.05;text-align:center;margin:10px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:-.8px}
 .duration-value{display:inline-flex;align-items:baseline;white-space:nowrap;font-variant-numeric:tabular-nums}
 .duration-days{font-size:1em;font-weight:800;line-height:1}
-.duration-unit{font-size:.75em;font-weight:800;line-height:1;margin-left:3px}
+.duration-unit{font-size:.75em;font-weight:800;line-height:1;margin-left:0}
 .duration-clock{font-size:1em;font-weight:800;line-height:1;margin-left:7px}
 .duration-inline{display:inline-flex;align-items:baseline;white-space:nowrap;font-variant-numeric:tabular-nums}
 .duration-inline .duration-days{font-weight:inherit}
@@ -168,7 +168,7 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .board-time-stat b .duration-value > .duration-days,
 .board-time-stat b .duration-value > .duration-unit,
 .board-time-stat b .duration-value > .duration-clock{display:inline!important;white-space:nowrap}
-.board-time-stat b .duration-unit{font-size:.75em!important}
+.board-time-stat b .duration-unit{font-size:.75em!important;margin-left:0!important}
 .board-time-stat b .duration-clock{margin-left:5px}
 @media(max-width:650px){.board-time-main{font-size:34px}}
 .overtime-card{transition:opacity .25s,border-color .25s}
@@ -1206,6 +1206,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-20-fix20</div>
+<div class="app-version">Salary Tracker v0.8.8 • FIX 23 • 2026-08-20</div>
 </body>
 </html>
