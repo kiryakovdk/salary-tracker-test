@@ -705,12 +705,26 @@ function woaActualDays(start,end){
  if(!start||!end||end<start)return 0;
  return Math.max(0,(end-start)/86400000);
 }
-function calcWoaEntry(entry,monthly){
- const s=woaDate(entry.start),e=woaDate(entry.end);
- if(!s||!e||e<s||monthly<=0)return {actual:0,paid:0,earned:0};
+function calcWoaEntry(entry,monthly,asOf){
+ const s=woaDate(entry.start);
+ if(!s||monthly<=0)return {actual:0,paid:0,earned:0};
+
+ const e=woaDate(entry.end);
+ const now=asOf instanceof Date ? asOf : new Date();
+
+ // An open WOA entry is active from Start until now.
+ // The 5-day minimum applies even before End is entered.
+ if(!e){
+  if(now < s)return {actual:0,paid:0,earned:0};
+  const actual=Math.max(0,(now-s)/86400000);
+  const paid=Math.max(actual,WOA_MIN_DAYS);
+  return {actual,paid,earned:paid*(monthly/30)};
+ }
+
+ if(e<s)return {actual:0,paid:0,earned:0};
+
  const actual=woaActualDays(s,e);
  const paid=Math.max(actual,WOA_MIN_DAYS);
- // Basic Wage is monthly. Use a 30-day month for the WOA premium.
  return {actual,paid,earned:paid*(monthly/30)};
 }
 function validateWoaEntries(entries){
@@ -730,18 +744,20 @@ function getWoaEarned(asOf){
  let total=0;
 
  entries.forEach(entry=>{
-  const s=woaDate(entry.start), e=woaDate(entry.end);
-  if(!s || !e || e<s || d<=s) return;
+  const s=woaDate(entry.start);
+  const e=woaDate(entry.end);
+  if(!s || d<s)return;
 
   const daily=monthly/30;
 
-  if(d>=e){
-   // Once the WOA entry is completed, the 5-day minimum applies.
-   const actual=(e-s)/86400000;
+  if(e && d>=e){
+   const actual=woaActualDays(s,e);
    total += Math.max(actual,WOA_MIN_DAYS)*daily;
   }else{
-   // While still inside WOA, accrue only the elapsed actual days.
-   total += ((d-s)/86400000)*daily;
+   // Open entry, or current date is still inside the completed interval.
+   // The minimum 5 paid days applies immediately once WOA starts.
+   const actual=Math.max(0,(d-s)/86400000);
+   total += Math.max(actual,WOA_MIN_DAYS)*daily;
   }
  });
 
@@ -757,7 +773,7 @@ function renderWoa(){
  c.innerHTML="";
  let actual=0,paid=0,earned=0;
  entries.forEach((entry,i)=>{
-  const x=calcWoaEntry(entry,monthly);
+  const x=calcWoaEntry(entry,monthly,new Date());
   actual+=x.actual;paid+=x.paid;earned+=x.earned;
   const el=document.createElement("div");
   el.className="woa-entry";
@@ -799,7 +815,7 @@ function refreshWoaStats(){
  let actual=0,paid=0,earned=0;
 
  entries.forEach((entry,i)=>{
-  const x=calcWoaEntry(entry,monthly);
+  const x=calcWoaEntry(entry,monthly,new Date());
   actual+=x.actual; paid+=x.paid; earned+=x.earned;
   const row=container.querySelector(`.woa-entry:nth-child(${i+1})`);
   if(!row)return;
@@ -1073,6 +1089,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix12</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix13</div>
 </body>
 </html>
