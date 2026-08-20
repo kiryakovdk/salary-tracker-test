@@ -264,6 +264,14 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
 </div>
 
+<div class="card" id="earningsBreakdown">
+ <div class="section-title">EARNINGS BREAKDOWN</div>
+ <div class="row"><span>Basic Salary</span><span id="breakdownBasic">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="breakdownOvertime">$0.00</span></div>
+ <div class="row"><span>WOA</span><span id="breakdownWoa">$0.00</span></div>
+ <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="breakdownTotal">$0.00</span></div>
+</div>
+
 <div class="card">
  <div class="section-title">CURRENCY</div>
  <div class="ticker" aria-label="Курсы валют">
@@ -1016,12 +1024,25 @@ function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
 }
 
 
+
+function renderEarningsBreakdown(basic,overtime,woa){
+ const total=Math.max(0,(Number(basic)||0)+(Number(overtime)||0)+(Number(woa)||0));
+ $("breakdownBasic").textContent=fmtUSD(basic);
+ $("breakdownOvertime").textContent=fmtUSD(overtime);
+ $("breakdownWoa").textContent=fmtUSD(woa);
+ $("breakdownTotal").textContent=fmtUSD(total);
+}
+
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  let earned=earnedAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
+ let breakdownLimit=(signoff && signoff<now)?signoff:now;
+ let breakdownBasic=start?Math.max(0,paidAmountBetween(start,breakdownLimit,salary)):0;
+ let breakdownWoa=Math.max(0,getWoaEarned(breakdownLimit));
+ renderEarningsBreakdown(breakdownBasic,overtimeEarned,breakdownWoa);
 
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
@@ -1089,6 +1110,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix13</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix14</div>
 </body>
 </html>
