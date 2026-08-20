@@ -1040,7 +1040,7 @@ function update(){
  let earned=earnedAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
  let breakdownLimit=(signoff && signoff<now)?signoff:now;
- let breakdownBasic=start?Math.max(0,paidAmountBetween(start,breakdownLimit,salary)):0;
+ let breakdownBasic=(start&&end)?Math.max(0,totalPaidContract(start,end,salary)):0;
  let breakdownWoa=Math.max(0,getWoaEarned(breakdownLimit));
  renderEarningsBreakdown(breakdownBasic,overtimeEarned,breakdownWoa);
 
@@ -1110,6 +1110,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix14</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix15</div>
 </body>
 </html>
