@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.8 • fix18</title>
+<title>Salary Tracker v0.8.8 • fix20</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -235,42 +235,29 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <h1>⚓ SALARY TRACKER</h1><div class="badge">LIVE</div>
 </header>
 
-<div class="card">
- <div class="grid">
-  <div><label>Месячная зарплата, USD</label><input id="salary" type="number" min="0" step=".01" value="5100"></div>
-  <div><label>Начало зарплаты</label><input id="start" type="date"></div>
-  <div><label>Конец контракта</label><input id="end" type="date"></div>
-  <div><label>Фактическое списание</label><input id="signoff" type="date"></div>
-  <div><label>Прогноз до даты</label><input id="forecast" type="date"></div>
- </div>
- <div class="buttons">
-  <button class="secondary" id="nowEnd">Поставить конец через 4 месяца</button>
-  <button class="secondary" id="nowForecast">Прогноз +30 дней</button>
-  <button class="secondary" id="reset">Сбросить</button>
- </div>
-</div>
-
 <div class="card board-time-card" id="boardTimeCard">
  <div class="section-title">TIME ON BOARD</div>
- <div class="board-time-main" id="boardTime">0 дн. 00:00:00</div>
- <div class="board-time-status" id="boardTimeStatus">НА БОРТУ</div>
+ <div class="board-time-main" id="boardTime">0d 00:00:00</div>
+ <div class="board-time-status" id="boardTimeStatus">ON BOARD</div>
  <div class="board-time-meta">
-  <div class="board-time-stat"><span>Contract time</span><b id="boardContractTime">0 дн. 00:00:00</b></div>
-  <div class="board-time-stat"><span>Overtime time</span><b id="boardOvertimeTime">0 дн. 00:00:00</b></div>
+  <div class="board-time-stat"><span>Contract time</span><b id="boardContractTime">0d 00:00:00</b></div>
+  <div class="board-time-stat"><span>Overtime time</span><b id="boardOvertimeTime">0d 00:00:00</b></div>
  </div>
 </div>
 
+
 <div class="card hero">
- <div class="kicker">Заработано с начала зарплаты</div>
+ <div class="kicker">EARNED SINCE PAY START</div>
  <div class="amount" id="usd">$0.00</div>
- <div class="live" id="liveStatus">НАЧИСЛЕНИЕ ИДЁТ</div>
+ <div class="live" id="liveStatus">EARNING RUNNING</div>
  <div class="stats">
-  <div class="stat"><span>В секунду</span><b id="sec">$0.001968</b></div>
-  <div class="stat"><span>В минуту</span><b id="min">$0.12</b></div>
-  <div class="stat"><span>В час</span><b id="hour">$7.08</b></div>
-  <div class="stat"><span>В оплач. день</span><b id="paidDay">$0.00</b></div>
+  <div class="stat"><span>Per second</span><b id="sec">$0.001968</b></div>
+  <div class="stat"><span>Per minute</span><b id="min">$0.12</b></div>
+  <div class="stat"><span>Per hour</span><b id="hour">$7.08</b></div>
+  <div class="stat"><span>Per paid day</span><b id="paidDay">$0.00</b></div>
  </div>
 </div>
+
 
 <div class="card" id="earningsBreakdown">
  <div class="section-title">CURRENT EARNINGS</div>
@@ -280,48 +267,50 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="breakdownTotal">$0.00</span></div>
 </div>
 
+
+
 <div class="card">
  <div class="section-title">CONTRACT STATUS</div>
  <div class="progress"><div class="bar" id="bar"></div></div>
- <div class="progress-meta"><span id="progressText">0%</span><span id="remaining">Осталось: --</span></div>
+ <div class="progress-meta"><span id="progressText">0%</span><span id="remaining">Remaining: --</span></div>
  <div style="margin-top:10px">
-  <div class="row"><span>Период</span><span id="period">--</span></div>
-  <div class="row"><span>Фактическое списание</span><span id="signoffStatus">--</span></div>
-  <div class="row"><span>Время по контракту</span><span id="elapsed">0 дн. 00:00:00</span></div>
-  <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
+  <div class="row"><span>Period</span><span id="period">--</span></div>
+  <div class="row"><span>Actual sign-off</span><span id="signoffStatus">--</span></div>
+  <div class="row"><span>Contract time</span><span id="elapsed">0d 00:00:00</span></div>
+  <div class="row"><span>Expected contract salary</span><span id="contractTotal">$0.00</span></div>
  </div>
 </div>
 
 <div class="card">
  <div class="section-title">CURRENCY</div>
- <div class="ticker" aria-label="Курсы валют">
+ <div class="ticker" aria-label="Exchange rates">
   <div class="ticker-window">
    <div class="ticker-track" id="tickerTrack"></div>
   </div>
  </div>
 <div class="currency">
-  <div class="box"><div class="small">Российские рубли</div><div class="value" id="rub">₽0.00</div><div class="rate" id="rubRate">Курс ЦБ: загрузка...</div></div>
-  <div class="box"><div class="small">Евро</div><div class="value" id="eur">€0.00</div><div class="rate" id="eurRate">Курс ЦБ: загрузка...</div></div>
+  <div class="box"><div class="small">Russian rubles</div><div class="value" id="rub">₽0.00</div><div class="rate" id="rubRate">Central Bank rate: loading...</div></div>
+  <div class="box"><div class="small">Euro</div><div class="value" id="eur">€0.00</div><div class="rate" id="eurRate">Central Bank rate: loading...</div></div>
  </div>
 </div>
 
 <div class="card">
  <div class="section-title">TODAY</div>
- <div class="row"><span>Начислено сегодня</span><span id="todayEarn">$0.00</span></div>
- <div class="row"><span>Статус 31-го числа</span><span id="day31">Оплачивается</span></div>
-  <div class="row"><span>Расчёт месяца</span><span id="monthRule">—</span></div>
- <div class="row"><span>До конца сегодняшнего оплачиваемого дня</span><span id="todayLeft">--</span></div>
+ <div class="row"><span>Earned today</span><span id="todayEarn">$0.00</span></div>
+ <div class="row"><span>31st day status</span><span id="day31">Paid</span></div>
+  <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
+ <div class="row"><span>Until end of today's paid day</span><span id="todayLeft">--</span></div>
 </div>
 
 <div class="card overtime-card inactive" id="overtimeCard">
  <div class="section-title">OVERTIME</div>
- <div class="small" id="overtimeStatus">После окончания контракта</div>
+ <div class="small" id="overtimeStatus">After contract end</div>
  <div class="forecast">
-  <div class="bigbox"><div class="small">Переработано после контракта</div><b id="overtimeTime">0 дн. 00:00:00</b></div>
-  <div class="bigbox"><div class="small">Заработано после контракта</div><b id="overtimeEarn">$0.00</b></div>
+  <div class="bigbox"><div class="small">Overtime after contract</div><b id="overtimeTime">0d 00:00:00</b></div>
+  <div class="bigbox"><div class="small">Earned after contract</div><b id="overtimeEarn">$0.00</b></div>
  </div>
- <div class="row" style="margin-top:10px"><span>В день</span><span id="overtimeDay">$0.00</span></div>
- <div class="row"><span>В час</span><span id="overtimeHour">$0.00</span></div>
+ <div class="row" style="margin-top:10px"><span>Per day</span><span id="overtimeDay">$0.00</span></div>
+ <div class="row"><span>Per hour</span><span id="overtimeHour">$0.00</span></div>
 </div>
 
 
@@ -347,7 +336,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="section-title">SALARY PROGRESS</div>
  <div id="salaryGraph" class="salary-graph"></div>
  <div class="chart-legend">
-  <span><i class="legend-dot"></i> Заработано: Salary + Overtime + WOA</span>
+  <span><i class="legend-dot"></i> Earned: Salary + Overtime + WOA</span>
   <span id="chartEndLabel">Contract End: --</span>
   <span id="chartSignoffLabel">Sign-off: --</span>
  </div>
@@ -356,51 +345,68 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <div class="card" id="allTimeCard">
  <div class="section-title">ALL-TIME EARNINGS</div>
  <div class="bigbox">
-  <div class="small">За все завершённые контракты</div>
+  <div class="small">All completed contracts</div>
   <b id="allTimeTotal">$0.00</b>
  </div>
- <div class="row" style="margin-top:10px"><span>Контракт</span><span id="allTimeContract">$0.00</span></div>
+ <div class="row" style="margin-top:10px"><span>Contract</span><span id="allTimeContract">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="allTimeOvertime">$0.00</span></div>
- <div class="row"><span>Контрактов</span><span id="allTimeContracts">0</span></div>
- <div class="row"><span>Средний контракт</span><span id="allTimeAverage">$0.00</span></div>
+ <div class="row"><span>Contracts</span><span id="allTimeContracts">0</span></div>
+ <div class="row"><span>Average contract</span><span id="allTimeAverage">$0.00</span></div>
 </div>
 
 <div class="card" id="historyCard">
  <div class="section-title">CONTRACT HISTORY</div>
  <div id="historyList">
-  <div class="small">Завершённых контрактов пока нет.</div>
+  <div class="small">No completed contracts yet.</div>
  </div>
  <button id="testContract" class="secondary" type="button" style="margin-top:12px;width:100%">TEST CONTRACT</button>
  <button id="clearTestHistory" class="secondary" type="button" style="margin-top:8px;width:100%">CLEAR TEST HISTORY</button>
  <div class="row" style="margin-top:10px">
-  <span>Всего контрактов</span><span id="historyCount">0</span>
+  <span>Total contracts</span><span id="historyCount">0</span>
  </div>
  <div class="row">
-  <span>Всего заработано</span><span id="historyTotal">$0.00</span>
+  <span>Total earned</span><span id="historyTotal">$0.00</span>
  </div>
 </div>
 
 <div class="card">
  <div class="section-title">FORECAST</div>
  <div class="forecast">
-  <div class="bigbox"><div class="small">Заработаю к выбранной дате</div><b id="forecastEarn">$0.00</b></div>
-  <div class="bigbox"><div class="small">Сколько осталось заработать</div><b id="forecastLeft">$0.00</b></div>
+  <div class="bigbox"><div class="small">Earned by selected date</div><b id="forecastEarn">$0.00</b></div>
+  <div class="bigbox"><div class="small">Remaining to earn</div><b id="forecastLeft">$0.00</b></div>
  </div>
 </div>
 
 <div class="card">
  <div class="section-title">SLEEP MODE 😴</div>
  <div class="grid">
-  <div><label>Лёг спать</label><input id="sleepStart" type="time" value="00:00"></div>
-  <div><label>Проснулся</label><input id="sleepEnd" type="time" value="08:00"></div>
+  <div><label>Sleep start</label><input id="sleepStart" type="time" value="00:00"></div>
+  <div><label>Wake up</label><input id="sleepEnd" type="time" value="08:00"></div>
  </div>
- <div class="row" style="margin-top:10px"><span>Пока спал, заработано</span><span id="sleepEarn">$0.00</span></div>
+ <div class="row" style="margin-top:10px"><span>Earned while asleep</span><span id="sleepEarn">$0.00</span></div>
 </div>
 
 <footer>
-Зарплата распределяется на 30 оплачиваемых суток. В месяцах с 31 днём 31-е число не начисляется.<br>
-Курсы RUB/EUR загружаются по официальным курсам ЦБ РФ. Данные сохраняются в браузере.
+Salary is distributed over 30 paid days. In 31-day months, the 31st day is not paid.<br>
+RUB/EUR rates are loaded from official Central Bank rates. Data is saved in the browser.
 </footer>
+
+<div class="card">
+ <div class="section-title">SETTINGS</div>
+ <div class="grid">
+  <div><label>Monthly salary, USD</label><input id="salary" type="number" min="0" step=".01" value="5100"></div>
+  <div><label>Pay start</label><input id="start" type="date"></div>
+  <div><label>Contract end</label><input id="end" type="date"></div>
+  <div><label>Actual sign-off</label><input id="signoff" type="date"></div>
+  <div><label>Forecast date</label><input id="forecast" type="date"></div>
+ </div>
+ <div class="buttons">
+  <button class="secondary" id="nowEnd">Set end +4 months</button>
+  <button class="secondary" id="nowForecast">Forecast +30 days</button>
+  <button class="secondary" id="reset">Reset</button>
+ </div>
+</div>
+
 </div>
 
 <script>
@@ -423,12 +429,12 @@ function fmtUSD(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,
 function fmtDuration(s){
  s=Math.max(0,Math.floor(s));let d=Math.floor(s/86400);s%=86400;
  let h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60);s%=60;
- return `${d} дн. ${pad(h)}:${pad(m)}:${pad(s)}`;
+ return `${d}d ${pad(h)}:${pad(m)}:${pad(s)}`;
 }
 
-/* Зарплата считается отдельно по каждому календарному месяцу.
-   31-е число не оплачивается. Февраль оплачивается полностью за 28/29 дней,
-   поэтому месячная зарплата не уменьшается из-за короткого месяца. */
+/* Salary is calculated separately for each calendar month.
+   The 31st day is not paid. February is fully paid for 28/29 days,
+   so the monthly salary is not reduced for shorter months. */
 function payableDaysInMonth(year,month){
   const days=new Date(year,month+1,0).getDate();
   return days===31 ? 30 : days;
@@ -538,7 +544,7 @@ async function loadRates(){
         if(code==="CNY" && Number.isFinite(value)) cny=value/nominal;
       });
 
-      if(!usd || !eur || !cny) throw new Error("USD/EUR/CNY не найдены");
+      if(!usd || !eur || !cny) throw new Error("USD/EUR/CNY not found");
 
       rates={usdRub:usd,eurRub:eur,cnyRub:cny};
       localStorage.setItem("salaryTrackerRates",JSON.stringify({...rates,updated:Date.now()}));
@@ -558,8 +564,8 @@ async function loadRates(){
     rates={usdRub:78.4756,eurRub:89.6034,cnyRub:10.95};
   }
 
-  $("rubRate").textContent="Курс USD: ₽"+rates.usdRub.toFixed(4);
-  $("eurRate").textContent="Курс EUR: ₽"+rates.eurRub.toFixed(4);
+  $("rubRate").textContent="USD rate: ₽"+rates.usdRub.toFixed(4);
+  $("eurRate").textContent="EUR rate: ₽"+rates.eurRub.toFixed(4);
   renderTicker();
   update();
 }
@@ -567,8 +573,8 @@ function updateOvertime(end,signoff,now,salary){
  const card=$("overtimeCard");
  if(!end || now<=end){
   card.classList.add("inactive"); card.classList.remove("active");
-  $("overtimeStatus").textContent=end?"Переработка начнётся после окончания контракта":"Укажи конец контракта";
-  $("overtimeTime").textContent="0 дн. 00:00:00";
+  $("overtimeStatus").textContent=end?"Overtime starts after contract end":"Set contract end";
+  $("overtimeTime").textContent="0d 00:00:00";
   $("overtimeEarn").textContent="$0.00";
   $("overtimeDay").textContent="$0.00";
   $("overtimeHour").textContent="$0.00";
@@ -622,7 +628,7 @@ function renderHistory(){
  $("historyTotal").textContent=fmtUSD(total);
 
  if(!history.length){
-  list.innerHTML='<div class="small">Завершённых контрактов пока нет.</div>';
+  list.innerHTML='<div class="small">No completed contracts yet.</div>';
   return;
  }
 
@@ -652,9 +658,9 @@ function archiveCompletedContract(start,end,signoff,salary){
  const overtime=paidAmountBetween(end,signoff,salary);
  history.push({
   key,
-  start:start.toLocaleDateString("ru-RU"),
-  end:end.toLocaleDateString("ru-RU"),
-  signoff:signoff.toLocaleDateString("ru-RU"),
+  start:start.toLocaleDateString("en-US"),
+  end:end.toLocaleDateString("en-US"),
+  signoff:signoff.toLocaleDateString("en-US"),
   salary,
   contract,
   overtime,
@@ -686,9 +692,9 @@ function createTestContract(){
  history.push({
   key,
   test:true,
-  start:start.toLocaleDateString("ru-RU"),
-  end:end.toLocaleDateString("ru-RU"),
-  signoff:signoff.toLocaleDateString("ru-RU"),
+  start:start.toLocaleDateString("en-US"),
+  end:end.toLocaleDateString("en-US"),
+  signoff:signoff.toLocaleDateString("en-US"),
   salary,
   contract,
   overtime,
@@ -793,7 +799,11 @@ function getWoaEarned(asOf){
 }
 function formatWoaDays(v){
  const n=Math.round(v*100)/100;
- return Number.isInteger(n)?String(n):n.toFixed(2);
+ const num=Number.isInteger(n)?String(n):n.toFixed(2);
+ const abs=Math.abs(n);
+ const whole=Math.floor(abs);
+ let word = Math.abs(abs-1)<1e-9 ? "day" : "days";
+ return `${num} ${word}`;
 }
 function renderWoa(){
  const c=$("woaEntries"); if(!c)return;
@@ -815,15 +825,15 @@ function renderWoa(){
     <div class="field"><label class="woa-date-label">End</label><input type="date" data-woa-end="${i}" value="${entry.end||""}"></div>
    </div>
    <div class="woa-meta">
-    <div class="woa-stat"><div class="woa-stat-label">Actual</div><div class="woa-stat-value">${formatWoaDays(x.actual)} days</div></div>
-    <div class="woa-stat"><div class="woa-stat-label">Paid</div><div class="woa-stat-value">${formatWoaDays(x.paid)} days</div></div>
+    <div class="woa-stat"><div class="woa-stat-label">Actual</div><div class="woa-stat-value">${formatWoaDays(x.actual)}</div></div>
+    <div class="woa-stat"><div class="woa-stat-label">Paid</div><div class="woa-stat-value">${formatWoaDays(x.paid)}</div></div>
    </div>
    <div class="small" style="margin-top:8px">Basic Wage: $${x.earned.toFixed(2)}</div>`;
   c.appendChild(el);
  });
  $("woaCount").textContent=`${entries.length} ${entries.length===1?"entry":"entries"}`;
- $("woaActualDays").textContent=`${formatWoaDays(actual)} days`;
- $("woaPaidDays").textContent=`${formatWoaDays(paid)} days`;
+ $("woaActualDays").textContent=`${formatWoaDays(actual)}`;
+ $("woaPaidDays").textContent=`${formatWoaDays(paid)}`;
  $("woaEarned").textContent=fmtUSD(earned);
  let w=$("woaOverlapWarning");
  if(!w){
@@ -848,15 +858,15 @@ function refreshWoaStats(){
   const row=container.querySelector(`.woa-entry:nth-child(${i+1})`);
   if(!row)return;
   const stats=row.querySelectorAll(".woa-stat-value");
-  if(stats[0])stats[0].textContent=`${formatWoaDays(x.actual)} days`;
-  if(stats[1])stats[1].textContent=`${formatWoaDays(x.paid)} days`;
+  if(stats[0])stats[0].textContent=`${formatWoaDays(x.actual)}`;
+  if(stats[1])stats[1].textContent=`${formatWoaDays(x.paid)}`;
   const small=row.querySelector(".small");
   if(small)small.textContent=`Basic Wage: $${x.earned.toFixed(2)}`;
  });
 
  if($("woaCount"))$("woaCount").textContent=`${entries.length} ${entries.length===1?"entry":"entries"}`;
- if($("woaActualDays"))$("woaActualDays").textContent=`${formatWoaDays(actual)} days`;
- if($("woaPaidDays"))$("woaPaidDays").textContent=`${formatWoaDays(paid)} days`;
+ if($("woaActualDays"))$("woaActualDays").textContent=`${formatWoaDays(actual)}`;
+ if($("woaPaidDays"))$("woaPaidDays").textContent=`${formatWoaDays(paid)}`;
  if($("woaEarned"))$("woaEarned").textContent=fmtUSD(earned);
 
  const warning=$("woaOverlapWarning");
@@ -951,7 +961,7 @@ function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
  if(!box) return;
 
  if(!start || !end || !salary){
-  box.innerHTML='<div class="small" style="padding:12px">Укажи даты контракта и зарплату</div>';
+  box.innerHTML='<div class="small" style="padding:12px">Set contract dates and salary</div>';
   return;
  }
 
@@ -1040,12 +1050,12 @@ function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
 
  if($("chartEndLabel")){
   $("chartEndLabel").textContent=
-   "Contract End: "+end.toLocaleDateString("ru-RU")+
+   "Contract End: "+end.toLocaleDateString("en-US")+
    (end>now?" (future)":"");
  }
  if($("chartSignoffLabel")){
   $("chartSignoffLabel").textContent=
-   "Actual: "+actualEnd.toLocaleDateString("ru-RU");
+   "Actual: "+actualEnd.toLocaleDateString("en-US");
  }
 }
 
@@ -1122,26 +1132,26 @@ function update(){
     ? new Date(Math.min(now.getTime(), end.getTime(), signoff ? signoff.getTime() : Infinity))
     : (signoff ? new Date(Math.min(now.getTime(), signoff.getTime())) : now);
   $("elapsed").textContent=fmtDuration(start && contractTimeEnd>start ? (contractTimeEnd-start)/1000 : 0);
-  $("period").textContent=start.toLocaleDateString("ru-RU")+" → "+(end?end.toLocaleDateString("ru-RU"):"—");
-  $("signoffStatus").textContent=signoff?signoff.toLocaleDateString("ru-RU"):"Не указано";
+  $("period").textContent=start.toLocaleDateString("en-US")+" → "+(end?end.toLocaleDateString("en-US"):"—");
+  $("signoffStatus").textContent=signoff?signoff.toLocaleDateString("en-US"):"Not specified";
  }
  if(end&&start){
   let all=(end-start)/1000, done=Math.max(0,Math.min(all,(now-start)/1000));
   let pct=all>0?done/all*100:0;
   $("bar").style.width=Math.min(100,pct)+"%";
   $("progressText").textContent=pct.toFixed(1)+"%";
-  $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
+  $("remaining").textContent=now<end?"Remaining: "+fmtDuration((end-now)/1000):"Contract completed";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
  }
  let is31=now.getDate()===31;
- $("day31").textContent=is31?"⏸ 31-е число не оплачивается":"✓ Оплачивается";
+ $("day31").textContent=is31?"⏸ The 31st day is not paid":"✓ Paid";
  $("day31").className=is31?"paused":"";
  const monthDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
  $("monthRule").textContent =
-   monthDays===28 ? "28 оплачиваемых дней" :
-   monthDays===29 ? "29 оплачиваемых дней" :
-   monthDays===31 ? "30 оплачиваемых дней (31-е не оплачивается)" :
-   "30 оплачиваемых дней";
+   monthDays===28 ? "28 paid days" :
+   monthDays===29 ? "29 paid days" :
+   monthDays===31 ? "30 paid days (31st day not paid)" :
+   "30 оплачиваемых days";
  let dayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
  let today=paidAmountBetween(dayStart,now,salary);
  $("todayEarn").textContent=fmtUSD(today);
@@ -1175,6 +1185,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-20-fix18</div>
+<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-20-fix20</div>
 </body>
 </html>
