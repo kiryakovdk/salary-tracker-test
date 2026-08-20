@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.8</title>
+<title>Salary Tracker v0.8.8 • fix18</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -146,6 +146,16 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
 .warning{color:var(--amber)}
 .paused{color:var(--amber)!important}
+/* FIX18: prominent total time on board */
+.board-time-card{border-color:#24543f;background:linear-gradient(145deg,#101a16,#0d1317)}
+.board-time-card .section-title{color:var(--green)}
+.board-time-main{font-size:42px;font-weight:800;line-height:1.05;text-align:center;margin:10px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:-.8px}
+.board-time-status{text-align:center;color:var(--green);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.board-time-meta{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:16px;background:#202a30;border-radius:10px;overflow:hidden}
+.board-time-stat{background:#090e12;padding:12px;text-align:center}
+.board-time-stat span{display:block;color:var(--muted);font-size:11px}
+.board-time-stat b{display:block;font-size:17px;margin-top:4px;font-variant-numeric:tabular-nums}
+@media(max-width:650px){.board-time-main{font-size:34px}}
 .overtime-card{transition:opacity .25s,border-color .25s}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
@@ -240,6 +250,16 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
 </div>
 
+<div class="card board-time-card" id="boardTimeCard">
+ <div class="section-title">TIME ON BOARD</div>
+ <div class="board-time-main" id="boardTime">0 дн. 00:00:00</div>
+ <div class="board-time-status" id="boardTimeStatus">НА БОРТУ</div>
+ <div class="board-time-meta">
+  <div class="board-time-stat"><span>Contract time</span><b id="boardContractTime">0 дн. 00:00:00</b></div>
+  <div class="board-time-stat"><span>Overtime time</span><b id="boardOvertimeTime">0 дн. 00:00:00</b></div>
+ </div>
+</div>
+
 <div class="card hero">
  <div class="kicker">Заработано с начала зарплаты</div>
  <div class="amount" id="usd">$0.00</div>
@@ -267,7 +287,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div style="margin-top:10px">
   <div class="row"><span>Период</span><span id="period">--</span></div>
   <div class="row"><span>Фактическое списание</span><span id="signoffStatus">--</span></div>
-  <div class="row"><span>Прошло оплачиваемого времени</span><span id="elapsed">0 дн. 00:00:00</span></div>
+  <div class="row"><span>Время по контракту</span><span id="elapsed">0 дн. 00:00:00</span></div>
   <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
  </div>
 </div>
@@ -1031,6 +1051,29 @@ function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
 
 
 
+function updateBoardTime(start,end,signoff,now){
+ const boardEnd=(signoff && signoff<=now)?signoff:now;
+ const totalSeconds=start && boardEnd>start ? (boardEnd-start)/1000 : 0;
+ const contractEnd=end ? new Date(Math.min(boardEnd.getTime(),end.getTime())) : boardEnd;
+ const contractSeconds=start && contractEnd>start ? (contractEnd-start)/1000 : 0;
+ const overtimeSeconds=end && boardEnd>end ? (boardEnd-end)/1000 : 0;
+
+ $("boardTime").textContent=fmtDuration(totalSeconds);
+ $("boardContractTime").textContent=fmtDuration(contractSeconds);
+ $("boardOvertimeTime").textContent=fmtDuration(overtimeSeconds);
+
+ if(signoff && signoff<=now){
+   $("boardTimeStatus").textContent="SIGNED OFF • TIME ON BOARD COMPLETE";
+   $("boardTimeStatus").style.color="var(--muted)";
+ }else if(start){
+   $("boardTimeStatus").textContent="ON BOARD • TIME RUNNING";
+   $("boardTimeStatus").style.color="var(--green)";
+ }else{
+   $("boardTimeStatus").textContent="ENTER START DATE";
+   $("boardTimeStatus").style.color="var(--muted)";
+ }
+}
+
 function earningsAtDate(asOf,start,end,signoff,now,salary){
  const limit=(signoff && signoff<now)?signoff:now;
  const d=asOf>limit?limit:asOf;
@@ -1055,6 +1098,7 @@ function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
+ updateBoardTime(start,end,signoff,now);
 
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary);
@@ -1126,6 +1170,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-20-fix17</div>
+<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-20-fix18</div>
 </body>
 </html>
