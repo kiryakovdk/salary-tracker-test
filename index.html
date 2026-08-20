@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.7</title>
+<title>Salary Tracker v0.8.8</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -922,7 +922,8 @@ function earnedAtDate(date,start,end,signoff,now,salary){
 
 
 function graphEarnedAtDate(date,start,end,signoff,now,salary){
- return earnedAtDate(date,start,end,signoff,now,salary);
+ // Keep graph values identical to Earnings Breakdown: Basic + Overtime + WOA.
+ return earningsAtDate(date,start,end,signoff,now,salary).total;
 }
 
 function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
@@ -942,14 +943,19 @@ function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
  const day=86400000;
  const points=[];
 
- // Use calendar-day points plus one exact "now/sign-off" point.
- let t=first;
- while(t<last){
+ // Use daily points plus exact contract/WOA event points.
+ const times=new Set([first,last]);
+ for(let t=first;t<=last;t+=day) times.add(t);
+ if(end.getTime()>=first && end.getTime()<=last) times.add(end.getTime());
+ getWoaEntries().forEach(entry=>{
+  const ws=woaDate(entry.start), we=woaDate(entry.end);
+  if(ws && ws.getTime()>=first && ws.getTime()<=last) times.add(ws.getTime());
+  if(we && we.getTime()>=first && we.getTime()<=last) times.add(we.getTime());
+ });
+ [...times].sort((a,b)=>a-b).forEach(t=>{
   const d=new Date(t);
   points.push([t,graphEarnedAtDate(d,start,end,signoff,now,salary)]);
-  t+=day;
- }
- points.push([last,graphEarnedAtDate(actualEnd,start,end,signoff,now,salary)]);
+ });
 
  // All points come from the same earnedAtDate() calculation as the main total.
  // The final point is therefore the same number, without a second graph-only formula.
@@ -1120,6 +1126,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix17</div>
+<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-20-fix17</div>
 </body>
 </html>
