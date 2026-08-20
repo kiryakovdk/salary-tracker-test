@@ -187,6 +187,7 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .app-version{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.3px;padding:14px 0 18px;opacity:.8}
 .total-earned-row{margin-top:9px;padding-top:9px;border-top:1px solid #263139;font-weight:750}
 .total-earned-row span:last-child{font-size:16px;color:var(--green);font-variant-numeric:tabular-nums}
+.earnings-note{font-size:10px;color:var(--muted);margin-top:8px}
 .history-item{background:#090e12;border:1px solid #1c252b;border-radius:12px;padding:13px;margin-top:9px}
 .history-item:first-child{margin-top:0}
 .history-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -251,6 +252,14 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
 </div>
 
+<div class="card" id="earningsBreakdown">
+ <div class="section-title">CURRENT EARNINGS</div>
+ <div class="row"><span>Basic Salary</span><span id="breakdownBasic">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="breakdownOvertime">$0.00</span></div>
+ <div class="row"><span>WOA</span><span id="breakdownWoa">$0.00</span></div>
+ <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="breakdownTotal">$0.00</span></div>
+</div>
+
 <div class="card">
  <div class="section-title">CONTRACT STATUS</div>
  <div class="progress"><div class="bar" id="bar"></div></div>
@@ -261,14 +270,6 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <div class="row"><span>Прошло оплачиваемого времени</span><span id="elapsed">0 дн. 00:00:00</span></div>
   <div class="row"><span>Ожидаемая зарплата за контракт</span><span id="contractTotal">$0.00</span></div>
  </div>
-</div>
-
-<div class="card" id="earningsBreakdown">
- <div class="section-title">EARNINGS BREAKDOWN</div>
- <div class="row"><span>Basic Salary</span><span id="breakdownBasic">$0.00</span></div>
- <div class="row"><span>Overtime</span><span id="breakdownOvertime">$0.00</span></div>
- <div class="row"><span>WOA</span><span id="breakdownWoa">$0.00</span></div>
- <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="breakdownTotal">$0.00</span></div>
 </div>
 
 <div class="card">
@@ -326,7 +327,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="section-title">SALARY PROGRESS</div>
  <div id="salaryGraph" class="salary-graph"></div>
  <div class="chart-legend">
-  <span><i class="legend-dot"></i> Заработано + WOA</span>
+  <span><i class="legend-dot"></i> Заработано: Salary + Overtime + WOA</span>
   <span id="chartEndLabel">Contract End: --</span>
   <span id="chartSignoffLabel">Sign-off: --</span>
  </div>
@@ -1024,6 +1025,18 @@ function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
 
 
 
+function earningsAtDate(asOf,start,end,signoff,now,salary){
+ const limit=(signoff && signoff<now)?signoff:now;
+ const d=asOf>limit?limit:asOf;
+ if(!d || !start || salary<=0) return {basic:0,overtime:0,woa:0,total:0};
+
+ const basicEnd=end ? new Date(Math.min(d.getTime(),end.getTime())) : d;
+ const basic=basicEnd>start ? paidAmountBetween(start,basicEnd,salary) : 0;
+ const overtime=(end && d>end) ? paidAmountBetween(end,d,salary) : 0;
+ const woa=Math.max(0,getWoaEarned(d));
+ return {basic,overtime,woa,total:basic+overtime+woa};
+}
+
 function renderEarningsBreakdown(basic,overtime,woa){
  const total=Math.max(0,(Number(basic)||0)+(Number(overtime)||0)+(Number(woa)||0));
  $("breakdownBasic").textContent=fmtUSD(basic);
@@ -1036,18 +1049,19 @@ function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
- let earned=earnedAtDate(now,start,end,signoff,now,salary);
- let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
- let breakdownLimit=(signoff && signoff<now)?signoff:now;
- let breakdownBasic=(start&&end)?Math.max(0,totalPaidContract(start,end,salary)):0;
- let breakdownWoa=Math.max(0,getWoaEarned(breakdownLimit));
- renderEarningsBreakdown(breakdownBasic,overtimeEarned,breakdownWoa);
 
+ let earnings=earningsAtDate(now,start,end,signoff,now,salary);
+ let overtimeEarned=updateOvertime(end,signoff,now,salary);
+ archiveCompletedContract(start,end,signoff,salary);
+ renderEarningsBreakdown(earnings.basic,earnings.overtime,earnings.woa);
+
+ // The large headline and the breakdown use exactly the same components.
+ const earned=earnings.total;
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
-$("sec").textContent=fmtUSD(currentPerSec);
-$("min").textContent=fmtUSD(currentPerSec*60);
-$("hour").textContent=fmtUSD(currentPerSec*3600);
+ $("sec").textContent=fmtUSD(currentPerSec);
+ $("min").textContent=fmtUSD(currentPerSec*60);
+ $("hour").textContent=fmtUSD(currentPerSec*3600);
  $("rub").textContent=rates.usdRub?"₽"+(earned*rates.usdRub).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2}):"₽—";
  $("eur").textContent=rates.usdRub&&rates.eurRub?"€"+(earned*rates.usdRub/rates.eurRub).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"€—";
 
@@ -1063,7 +1077,6 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
   $("progressText").textContent=pct.toFixed(1)+"%";
   $("remaining").textContent=now<end?"Осталось: "+fmtDuration((end-now)/1000):"Контракт завершён";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
- } else {
  }
  let is31=now.getDate()===31;
  $("day31").textContent=is31?"⏸ 31-е число не оплачивается":"✓ Оплачивается";
@@ -1107,6 +1120,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix16</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix17</div>
 </body>
 </html>
