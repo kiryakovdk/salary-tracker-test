@@ -150,6 +150,14 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .board-time-card{border-color:#24543f;background:linear-gradient(145deg,#101a16,#0d1317)}
 .board-time-card .section-title{color:var(--green)}
 .board-time-main{font-size:42px;font-weight:800;line-height:1.05;text-align:center;margin:10px 0 6px;font-variant-numeric:tabular-nums;letter-spacing:-.8px}
+.duration-value{display:inline-flex;align-items:baseline;white-space:nowrap;font-variant-numeric:tabular-nums}
+.duration-days{font-size:1em;font-weight:800;line-height:1}
+.duration-unit{font-size:.5em;font-weight:800;line-height:1;margin-left:3px}
+.duration-clock{font-size:1em;font-weight:800;line-height:1;margin-left:7px}
+.duration-inline{display:inline-flex;align-items:baseline;white-space:nowrap;font-variant-numeric:tabular-nums}
+.duration-inline .duration-days{font-weight:inherit}
+.duration-inline .duration-clock{font-weight:inherit}
+
 .board-time-status{text-align:center;color:var(--green);font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
 .board-time-meta{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:16px;background:#202a30;border-radius:10px;overflow:hidden}
 .board-time-stat{background:#090e12;padding:12px;text-align:center}
@@ -237,11 +245,11 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 
 <div class="card board-time-card" id="boardTimeCard">
  <div class="section-title">TIME ON BOARD</div>
- <div class="board-time-main" id="boardTime">0d 00:00:00</div>
+ <div class="board-time-main" id="boardTime">0D 00:00:00</div>
  <div class="board-time-status" id="boardTimeStatus">ON BOARD</div>
  <div class="board-time-meta">
-  <div class="board-time-stat"><span>Contract time</span><b id="boardContractTime">0d 00:00:00</b></div>
-  <div class="board-time-stat"><span>Overtime time</span><b id="boardOvertimeTime">0d 00:00:00</b></div>
+  <div class="board-time-stat"><span>Contract time</span><b id="boardContractTime">0D 00:00:00</b></div>
+  <div class="board-time-stat"><span>Overtime time</span><b id="boardOvertimeTime">0D 00:00:00</b></div>
  </div>
 </div>
 
@@ -276,7 +284,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div style="margin-top:10px">
   <div class="row"><span>Period</span><span id="period">--</span></div>
   <div class="row"><span>Actual sign-off</span><span id="signoffStatus">--</span></div>
-  <div class="row"><span>Contract time</span><span id="elapsed">0d 00:00:00</span></div>
+  <div class="row"><span>Contract time</span><span id="elapsed">0D 00:00:00</span></div>
   <div class="row"><span>Expected contract salary</span><span id="contractTotal">$0.00</span></div>
  </div>
 </div>
@@ -306,7 +314,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="section-title">OVERTIME</div>
  <div class="small" id="overtimeStatus">After contract end</div>
  <div class="forecast">
-  <div class="bigbox"><div class="small">Overtime after contract</div><b id="overtimeTime">0d 00:00:00</b></div>
+  <div class="bigbox"><div class="small">Overtime after contract</div><b id="overtimeTime">0D 00:00:00</b></div>
   <div class="bigbox"><div class="small">Earned after contract</div><b id="overtimeEarn">$0.00</b></div>
  </div>
  <div class="row" style="margin-top:10px"><span>Per day</span><span id="overtimeDay">$0.00</span></div>
@@ -429,7 +437,13 @@ function fmtUSD(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,
 function fmtDuration(s){
  s=Math.max(0,Math.floor(s));let d=Math.floor(s/86400);s%=86400;
  let h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60);s%=60;
- return `${d}d ${pad(h)}:${pad(m)}:${pad(s)}`;
+ return `${d}D ${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+function fmtDurationHTML(s, inline=false){
+ s=Math.max(0,Math.floor(s));let d=Math.floor(s/86400);s%=86400;
+ let h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60);s%=60;
+ const cls=inline?'duration-inline':'duration-value';
+ return `<span class="${cls}"><span class="duration-days">${d}</span><span class="duration-unit">D</span><span class="duration-clock">${pad(h)}:${pad(m)}:${pad(s)}</span></span>`;
 }
 
 /* Salary is calculated separately for each calendar month.
@@ -589,7 +603,7 @@ function updateOvertime(end,signoff,now,salary){
  const earned=paidAmountBetween(end,effectiveNow,salary);
  const dayRate=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  $("overtimeStatus").textContent=active?"CONTRACT ENDED • OVERTIME ACTIVE":"OVERTIME COMPLETED";
- $("overtimeTime").textContent=fmtDuration(seconds);
+ $("overtimeTime").innerHTML=fmtDurationHTML(seconds);
  $("overtimeEarn").textContent=fmtUSD(earned);
  $("overtimeDay").textContent=fmtUSD(dayRate);
  $("overtimeHour").textContent=fmtUSD(dayRate/24);
@@ -798,12 +812,12 @@ function getWoaEarned(asOf){
  return Math.max(0,total);
 }
 function formatWoaDays(v){
- const n=Math.round(v*100)/100;
- const num=Number.isInteger(n)?String(n):n.toFixed(2);
- const abs=Math.abs(n);
- const whole=Math.floor(abs);
- let word = Math.abs(abs-1)<1e-9 ? "day" : "days";
- return `${num} ${word}`;
+ // WOA is displayed in whole days. Any started day counts as a day:
+ // 0.1..1.0 => 1 day, 1.01..2.0 => 2 days, etc.
+ const n = Number(v) || 0;
+ const days = n > 0 ? Math.ceil(n - 1e-9) : 0;
+ const word = days === 1 ? "day" : "days";
+ return `${days} ${word}`;
 }
 function renderWoa(){
  const c=$("woaEntries"); if(!c)return;
@@ -1068,9 +1082,9 @@ function updateBoardTime(start,end,signoff,now){
  const contractSeconds=start && contractEnd>start ? (contractEnd-start)/1000 : 0;
  const overtimeSeconds=end && boardEnd>end ? (boardEnd-end)/1000 : 0;
 
- $("boardTime").textContent=fmtDuration(totalSeconds);
- $("boardContractTime").textContent=fmtDuration(contractSeconds);
- $("boardOvertimeTime").textContent=fmtDuration(overtimeSeconds);
+ $("boardTime").innerHTML=fmtDurationHTML(totalSeconds);
+ $("boardContractTime").innerHTML=fmtDurationHTML(contractSeconds);
+ $("boardOvertimeTime").innerHTML=fmtDurationHTML(overtimeSeconds);
 
  if(signoff && signoff<=now){
    $("boardTimeStatus").textContent="SIGNED OFF • TIME ON BOARD COMPLETE";
@@ -1131,7 +1145,7 @@ function update(){
   const contractTimeEnd = end
     ? new Date(Math.min(now.getTime(), end.getTime(), signoff ? signoff.getTime() : Infinity))
     : (signoff ? new Date(Math.min(now.getTime(), signoff.getTime())) : now);
-  $("elapsed").textContent=fmtDuration(start && contractTimeEnd>start ? (contractTimeEnd-start)/1000 : 0);
+  $("elapsed").innerHTML=fmtDurationHTML(start && contractTimeEnd>start ? (contractTimeEnd-start)/1000 : 0);
   $("period").textContent=start.toLocaleDateString("en-US")+" → "+(end?end.toLocaleDateString("en-US"):"—");
   $("signoffStatus").textContent=signoff?signoff.toLocaleDateString("en-US"):"Not specified";
  }
@@ -1140,7 +1154,7 @@ function update(){
   let pct=all>0?done/all*100:0;
   $("bar").style.width=Math.min(100,pct)+"%";
   $("progressText").textContent=pct.toFixed(1)+"%";
-  $("remaining").textContent=now<end?"Remaining: "+fmtDuration((end-now)/1000):"Contract completed";
+  $("remaining").innerHTML=now<end?"Remaining: "+fmtDurationHTML((end-now)/1000,true):"Contract completed";
   $("contractTotal").textContent=fmtUSD(totalPaidContract(start,end,salary));
  }
  let is31=now.getDate()===31;
@@ -1156,7 +1170,7 @@ function update(){
  let today=paidAmountBetween(dayStart,now,salary);
  $("todayEarn").textContent=fmtUSD(today);
  let next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
- $("todayLeft").textContent=fmtDuration((next-now)/1000);
+ $("todayLeft").innerHTML=fmtDurationHTML((next-now)/1000,true);
 
  let f=getDate("forecast");
  if(f&&start){
