@@ -1116,7 +1116,12 @@ function update(){
  $("eur").textContent=rates.usdRub&&rates.eurRub?"€"+(earned*rates.usdRub/rates.eurRub).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"€—";
 
  if(start){
-  $("elapsed").textContent=fmtDuration(paidBetween(start,now));
+  // Contract time is actual elapsed time inside the contract period.
+  // It must stop at Contract End (or earlier sign-off), unlike overtime.
+  const contractTimeEnd = end
+    ? new Date(Math.min(now.getTime(), end.getTime(), signoff ? signoff.getTime() : Infinity))
+    : (signoff ? new Date(Math.min(now.getTime(), signoff.getTime())) : now);
+  $("elapsed").textContent=fmtDuration(start && contractTimeEnd>start ? (contractTimeEnd-start)/1000 : 0);
   $("period").textContent=start.toLocaleDateString("ru-RU")+" → "+(end?end.toLocaleDateString("ru-RU"):"—");
   $("signoffStatus").textContent=signoff?signoff.toLocaleDateString("ru-RU"):"Не указано";
  }
