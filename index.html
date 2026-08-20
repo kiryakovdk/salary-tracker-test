@@ -721,11 +721,31 @@ function validateWoaEntries(entries){
  }
  return {ok:true};
 }
-function getWoaEarned(){
+function getWoaEarned(asOf){
  const entries=getWoaEntries();
  const monthly=parseFloat($("woaBasicWage")?.value)||0;
- if(!validateWoaEntries(entries).ok)return 0;
- return entries.reduce((s,e)=>s+calcWoaEntry(e,monthly).earned,0);
+ if(monthly<=0 || !validateWoaEntries(entries).ok)return 0;
+
+ const d=asOf instanceof Date ? asOf : new Date();
+ let total=0;
+
+ entries.forEach(entry=>{
+  const s=woaDate(entry.start), e=woaDate(entry.end);
+  if(!s || !e || e<s || d<=s) return;
+
+  const daily=monthly/30;
+
+  if(d>=e){
+   // Once the WOA entry is completed, the 5-day minimum applies.
+   const actual=(e-s)/86400000;
+   total += Math.max(actual,WOA_MIN_DAYS)*daily;
+  }else{
+   // While still inside WOA, accrue only the elapsed actual days.
+   total += ((d-s)/86400000)*daily;
+  }
+ });
+
+ return Math.max(0,total);
 }
 function formatWoaDays(v){
  const n=Math.round(v*100)/100;
@@ -867,28 +887,21 @@ function woaEarnedAtDate(date, monthly){
 function earnedAtDate(date,start,end,signoff,now,salary){
  if(!date || !start || !salary) return 0;
 
- // Never count money from the future.
  const actualLimit = signoff && signoff < now ? signoff : now;
  const d = date > actualLimit ? actualLimit : date;
 
- const regular = d <= end
-  ? paidAmountBetween(start,d,salary)
-  : paidAmountBetween(start,end,salary) + paidAmountBetween(end,d,salary);
+ const regular = paidAmountBetween(start,d,salary);
+ const woa = getWoaEarned(d);
 
- const woa = woaEarnedAtDate(d,salary);
  return Math.max(0,regular + woa);
 }
 
 
 function graphEarnedAtDate(date,start,end,signoff,now,salary){
- if(!date || !start || !salary) return 0;
- const d = date>now ? now : date;
- const regular = paidAmountBetween(start,d,salary);
- const woa = woaEarnedAtDate(d,salary);
- return Math.max(0,regular+woa);
+ return earnedAtDate(date,start,end,signoff,now,salary);
 }
 
-function renderSalaryGraph(start,end,signoff,now,salary){
+function renderSalaryGraph(start,end,signoff,now,salary,currentEarned){
  const box=document.getElementById("salaryGraph");
  if(!box) return;
 
@@ -914,13 +927,10 @@ function renderSalaryGraph(start,end,signoff,now,salary){
  }
  points.push([last,graphEarnedAtDate(actualEnd,start,end,signoff,now,salary)]);
 
- // Guarantee the rendered series is cumulative and its final point is
- // exactly the same total shown by the main salary counter.
- const finalEarned = paidAmountBetween(start,actualEnd,salary) + getWoaEarned();
- points[points.length-1][1]=Math.max(0,finalEarned);
- for(let i=1;i<points.length;i++){
-  if(points[i][1] < points[i-1][1]) points[i][1]=points[i-1][1];
- }
+ // All points come from the same earnedAtDate() calculation as the main total.
+ // The final point is therefore the same number, without a second graph-only formula.
+ const finalEarned=Math.max(0,Number(currentEarned)||0);
+ points[points.length-1][1]=finalEarned;
 
  const w=Math.max(280,box.clientWidth||320);
  const h=220,L=44,R=10,T=12,B=30;
@@ -994,8 +1004,7 @@ function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  let currentPerSec=monthlyPerSecond(now.getFullYear(),now.getMonth(),salary);
  let currentPaidDay=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
- let woaEarned=getWoaEarned();
- let earned=paidAmountBetween(start,now,salary)+woaEarned;
+ let earned=earnedAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary); archiveCompletedContract(start,end,signoff,salary);
 
  $("usd").textContent=fmtUSD(earned);
@@ -1045,7 +1054,7 @@ $("hour").textContent=fmtUSD(currentPerSec*3600);
  }
  updateSleep(currentPerSec);
  save();
- try{renderSalaryGraph(start,end,signoff,now,salary);}catch(e){console.error(e);}
+ try{renderSalaryGraph(start,end,signoff,now,salary,earned);}catch(e){console.error(e);}
 }
 function updateSleep(perSec){
  let ss=$("sleepStart").value,se=$("sleepEnd").value;if(!ss||!se)return;
@@ -1064,6 +1073,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix10</div>
+<div class="app-version">Salary Tracker • v0.8.7 • Build 2026-08-20-fix12</div>
 </body>
 </html>
