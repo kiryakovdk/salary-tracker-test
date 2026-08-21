@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.8 • fix23</title>
+<title>Salary Tracker v0.8.8 • fix22</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -365,6 +365,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
  <div class="row" style="margin-top:10px"><span>Contract</span><span id="allTimeContract">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="allTimeOvertime">$0.00</span></div>
+ <div class="row"><span>WOA</span><span id="allTimeWoa">$0.00</span></div>
  <div class="row"><span>Contracts</span><span id="allTimeContracts">0</span></div>
  <div class="row"><span>Average contract</span><span id="allTimeAverage">$0.00</span></div>
 </div>
@@ -631,14 +632,15 @@ function renderAllTime(){
  const history=getHistory();
  const contract=history.reduce((s,x)=>s+(Number(x.contract)||0),0);
  const overtime=history.reduce((s,x)=>s+(Number(x.overtime)||0),0);
- const total=contract+overtime;
- const count=history.length;
- $("allTimeTotal").textContent=fmtUSD(total);
- $("allTimeContract").textContent=fmtUSD(contract);
- $("allTimeOvertime").textContent=fmtUSD(overtime);
- $("allTimeContracts").textContent=count;
- $("allTimeAverage").textContent=fmtUSD(count?total/count:0);
-}
+ const woa=history.reduce((s,x)=>s+(Number(x.woa)||0),0);
+ const total=contract+overtime+woa;
+  const el = document.getElementById('allTime');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="alltime-total">${money(total)}</div>
+    <div class="alltime-meta">${history.length} ${history.length === 1 ? 'contract' : 'contracts'}</div>
+  `;
+  return;
 
 function renderHistory(){
  const history=getHistory();
@@ -664,11 +666,36 @@ function renderHistory(){
     <div class="history-cell">Salary<b>${fmtUSD(x.salary)}</b></div>
     <div class="history-cell">Contract earnings<b>${fmtUSD(x.contract)}</b></div>
     <div class="history-cell">Overtime<b>${fmtUSD(x.overtime)}</b></div>
+    <div class="history-cell">WOA<b>${fmtUSD(x.woa||0)}</b></div>
     <div class="history-cell">Time after contract<b>${x.overtimeTime}</b></div>
    </div>
   </div>
  `).join("");
 }
+function getWoaEarnedForPeriod(periodStart,periodEnd){
+ const monthly=parseFloat($("woaBasicWage")?.value)||0;
+ if(!periodStart||!periodEnd||monthly<=0||periodEnd<=periodStart)return 0;
+ const entries=getWoaEntries();
+ if(!entries.length)return 0;
+ let total=0;
+ entries.forEach(entry=>{
+  const s=woaDate(entry.start), e=woaDate(entry.end);
+  if(!s || s>=periodEnd)return;
+  if(e && e<=periodStart)return;
+
+  // Count WOA earned during this contract/sign-off period.
+  // If the WOA entry started during the period, the 5-day minimum applies.
+  const effectiveStart=s>periodStart?s:periodStart;
+  const effectiveEnd=e && e<periodEnd?e:periodEnd;
+  if(effectiveEnd<=effectiveStart)return;
+
+  const actual=(effectiveEnd-effectiveStart)/86400000;
+  const paid=s>=periodStart ? Math.max(actual,WOA_MIN_DAYS) : actual;
+  total += paid*(monthly/30);
+ });
+ return Math.max(0,total);
+}
+
 function archiveCompletedContract(start,end,signoff,salary){
  if(!start||!end||!signoff||signoff<=end||signoff>new Date()) return;
  const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
@@ -677,6 +704,7 @@ function archiveCompletedContract(start,end,signoff,salary){
 
  const contract=totalPaidContract(start,end,salary);
  const overtime=paidAmountBetween(end,signoff,salary);
+ const woa=getWoaEarnedForPeriod(start,signoff);
  history.push({
   key,
   start:start.toLocaleDateString("en-US"),
@@ -685,8 +713,9 @@ function archiveCompletedContract(start,end,signoff,salary){
   salary,
   contract,
   overtime,
+  woa,
   overtimeTime:fmtDuration((signoff-end)/1000),
-  total:contract+overtime
+  total:contract+overtime+woa
  });
  saveHistory(history);
  renderHistory();
@@ -1206,6 +1235,6 @@ if ("serviceWorker" in navigator) {
 }
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker v0.8.8 • FIX 23 • 2026-08-20</div>
+<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-21-FIX25</div>
 </body>
 </html>
