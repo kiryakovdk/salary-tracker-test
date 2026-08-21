@@ -363,11 +363,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <div class="small">All completed contracts</div>
   <b id="allTimeTotal">$0.00</b>
  </div>
- <div class="row" style="margin-top:10px"><span>Contract</span><span id="allTimeContract">$0.00</span></div>
- <div class="row"><span>Overtime</span><span id="allTimeOvertime">$0.00</span></div>
- <div class="row"><span>WOA</span><span id="allTimeWoa">$0.00</span></div>
- <div class="row"><span>Contracts</span><span id="allTimeContracts">0</span></div>
- <div class="row"><span>Average contract</span><span id="allTimeAverage">$0.00</span></div>
+ <div class="row" style="margin-top:10px"><span>Contracts</span><span id="allTimeContracts">0</span></div>
 </div>
 
 <div class="card" id="historyCard">
@@ -634,13 +630,9 @@ function renderAllTime(){
  const overtime=history.reduce((s,x)=>s+(Number(x.overtime)||0),0);
  const woa=history.reduce((s,x)=>s+(Number(x.woa)||0),0);
  const total=contract+overtime+woa;
-  const el = document.getElementById('allTime');
-  if (!el) return;
-  el.innerHTML = `
-    <div class="alltime-total">${money(total)}</div>
-    <div class="alltime-meta">${history.length} ${history.length === 1 ? 'contract' : 'contracts'}</div>
-  `;
-  return;
+ $("allTimeTotal").textContent=fmtUSD(total);
+ $("allTimeContracts").textContent=history.length;
+}
 
 function renderHistory(){
  const history=getHistory();
@@ -662,13 +654,6 @@ function renderHistory(){
     <div class="history-date">${x.start} → ${x.signoff}</div>
    </div>
    <div class="history-total">${fmtUSD(x.total)}</div>
-   <div class="history-grid">
-    <div class="history-cell">Salary<b>${fmtUSD(x.salary)}</b></div>
-    <div class="history-cell">Contract earnings<b>${fmtUSD(x.contract)}</b></div>
-    <div class="history-cell">Overtime<b>${fmtUSD(x.overtime)}</b></div>
-    <div class="history-cell">WOA<b>${fmtUSD(x.woa||0)}</b></div>
-    <div class="history-cell">Time after contract<b>${x.overtimeTime}</b></div>
-   </div>
   </div>
  `).join("");
 }
