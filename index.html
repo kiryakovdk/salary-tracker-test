@@ -415,11 +415,6 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="row" style="margin-top:10px"><span>Earned while asleep</span><span id="sleepEarn">$0.00</span></div>
 </div>
 
-<footer>
-Salary is distributed over 30 paid days. In 31-day months, the 31st day is not paid.<br>
-RUB/EUR rates are loaded from official Central Bank rates. Data is saved in the browser.
-</footer>
-
 <div class="card">
  <div class="section-title">SETTINGS</div>
  <div class="grid">
@@ -435,6 +430,11 @@ RUB/EUR rates are loaded from official Central Bank rates. Data is saved in the 
   <button class="secondary" id="reset">Reset</button>
  </div>
 </div>
+
+<footer>
+Salary is calculated over 30 paid days per month. In 31-day months, the 31st day is not paid.<br>
+USD/RUB, EUR/RUB and CNY/RUB rates are loaded from the official Central Bank of Russia. Rates refresh every 6 hours. Data is stored in the browser.
+</footer>
 
 </div>
 
@@ -1273,6 +1273,6 @@ if(savedGoal!==null) $("earningsGoal").value=savedGoal;
 $("earningsGoal").addEventListener("input",()=>{localStorage.setItem("salaryTrackerEarningsGoal",$("earningsGoal").value);update();});
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-21-v0.8.9</div>
+<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-21-v0.8.10</div>
 </body>
 </html>
