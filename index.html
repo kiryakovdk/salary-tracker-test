@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.8.8 • fix22</title>
+<title>Salary Tracker v0.9.2</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -171,6 +171,11 @@ button.secondary{background:#192127;color:#dfe7ea;border:1px solid #2a363e}
 .board-time-stat b .duration-unit{font-size:.75em!important;margin-left:0!important}
 .board-time-stat b .duration-clock{margin-left:5px}
 @media(max-width:650px){.board-time-main{font-size:34px}}
+
+.today-card .today-main{text-align:center;padding:4px 0 2px}
+.today-card .today-main .small{font-size:10px;letter-spacing:1.8px;text-transform:uppercase}
+.today-amount{font-size:38px;font-weight:780;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-1px;margin-top:4px}
+.today-card .progress-meta{margin-top:7px}
 .overtime-card{transition:opacity .25s,border-color .25s}
 .overtime-card.inactive{opacity:.55}
 .overtime-card.active{border-color:#24543f}
@@ -326,12 +331,23 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
 </div>
 
-<div class="card">
+<div class="card today-card" id="todayCard">
  <div class="section-title">TODAY</div>
- <div class="row"><span>Earned today</span><span id="todayEarn">$0.00</span></div>
+ <div class="today-main">
+  <div class="small">EARNED TODAY</div>
+  <div class="today-amount" id="todayEarnBig">$0.00</div>
+ </div>
+ <div class="progress" style="margin-top:14px"><div class="bar" id="todayProgressBar"></div></div>
+ <div class="progress-meta">
+  <span id="todayProgress">0%</span>
+  <span id="todayLeft">--</span>
+ </div>
+ <div class="row"><span>Paid time today</span><span id="todayPaidTime">0D 00:00:00</span></div>
+ <div class="row"><span>Basic Salary</span><span id="todayBasic">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="todayOvertime">$0.00</span></div>
+ <div class="row"><span>WOA</span><span id="todayWoa">$0.00</span></div>
  <div class="row"><span>31st day status</span><span id="day31">Paid</span></div>
-  <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
- <div class="row"><span>Until end of today's paid day</span><span id="todayLeft">--</span></div>
+ <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
 </div>
 
 <div class="card overtime-card inactive" id="overtimeCard">
@@ -1236,12 +1252,44 @@ function update(){
    monthDays===28 ? "28 paid days" :
    monthDays===29 ? "29 paid days" :
    monthDays===31 ? "30 paid days (31st day not paid)" :
-   "30 оплачиваемых days";
+   "30 paid days";
+
+ // Today earnings are broken down using the same components as Total Earned.
  let dayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
- let today=paidAmountBetween(dayStart,now,salary);
- $("todayEarn").textContent=fmtUSD(today);
+ let paidSecondsToday=paidBetween(dayStart,now);
+ let basicToday=paidSecondsToday*currentPerSec;
+
+ // Overtime earned today, only for time after Contract End.
+ let overtimeToday=0;
+ if(end && now>end){
+   const otStart=dayStart>end?dayStart:end;
+   const otEnd=signoff && signoff<now?signoff:now;
+   if(otEnd>otStart) overtimeToday=paidAmountBetween(otStart,otEnd,salary);
+ }
+
+ // WOA earned today. Only the incremental amount attributable to today
+ // is added to the Today block, while the minimum-5-day rule remains in
+ // the overall WOA calculation.
+ let woaToday=0;
+ const todayBefore=new Date(now.getTime());
+ todayBefore.setDate(todayBefore.getDate()-1);
+ const totalWoaNow=getWoaEarned(now);
+ const totalWoaBefore=getWoaEarned(dayStart);
+ woaToday=Math.max(0,totalWoaNow-totalWoaBefore);
+
+ let today=basicToday+overtimeToday+woaToday;
+ $("todayEarnBig").textContent=fmtUSD(today);
+
+ if($("todayBasic"))$("todayBasic").textContent=fmtUSD(basicToday);
+ if($("todayOvertime"))$("todayOvertime").textContent=fmtUSD(overtimeToday);
+ if($("todayWoa"))$("todayWoa").textContent=fmtUSD(woaToday);
+
+ let dayProgress=is31?0:Math.min(100,(paidSecondsToday/86400)*100);
+ $("todayProgressBar").style.width=dayProgress+"%";
+ $("todayProgress").textContent=dayProgress.toFixed(1)+"%";
+ $("todayPaidTime").innerHTML=fmtDurationHTML(paidSecondsToday);
  let next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
- $("todayLeft").innerHTML=fmtDurationHTML((next-now)/1000,true);
+ $("todayLeft").innerHTML=is31?"31st day is not paid":fmtDurationHTML((next-now)/1000,true);
 
  let f=getDate("forecast");
  if(f&&start){
@@ -1273,6 +1321,6 @@ if(savedGoal!==null) $("earningsGoal").value=savedGoal;
 $("earningsGoal").addEventListener("input",()=>{localStorage.setItem("salaryTrackerEarningsGoal",$("earningsGoal").value);update();});
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.8.8 • Build 2026-08-21-v0.8.10</div>
+<div class="app-version">Salary Tracker • v0.9.2 • Build 2026-08-24</div>
 </body>
 </html>
