@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.9.2</title>
+<title>Salary Tracker v0.9.5</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -494,16 +494,45 @@ function payableDaysInMonth(year,month){
 function paidSecondsInMonth(year,month){
   return payableDaysInMonth(year,month)*86400;
 }
-function paidAmountBetween(a,b,salary){
+function sameMonth(a,b){
+  return a && b &&
+    a.getFullYear()===b.getFullYear() &&
+    a.getMonth()===b.getMonth();
+}
+function isPaidCalendarDay(date,payStart){
+  if(!date)return false;
+  // The first partial month is special: if pay starts after the 1st,
+  // every calendar day from Pay Start through month-end is paid,
+  // including the 31st.
+  if(payStart && sameMonth(date,payStart) && payStart.getDate()!==1){
+    return true;
+  }
+  // In later 31-day months, the 31st calendar day is unpaid.
+  return date.getDate()!==31;
+}
+function paidAmountBetween(a,b,salary,payStart){
   if(!a||!b||b<=a||salary<=0)return 0;
+  payStart = payStart || a;
   let total=0,c=new Date(a);
   while(c<b){
     const year=c.getFullYear(), month=c.getMonth();
     const next=new Date(year,month+1,1);
     const e=b<next?b:next;
-    let seconds=0;
-    if(c.getDate()!==31) seconds=(e-c)/1000;
-    total += seconds * salary / paidSecondsInMonth(year,month);
+
+    // Work day-by-day only around the 31st boundary, otherwise use the
+    // entire month segment for efficiency.
+    const segmentIsFirstPartial = sameMonth(c,payStart) && payStart.getDate()!==1;
+    if(segmentIsFirstPartial){
+      total += ((e-c)/1000) * salary / paidSecondsInMonth(year,month);
+    }else if(c.getDate()!==31){
+      const month31 = new Date(year,month,31,0,0,0,0);
+      if(month31>=e || month31<c){
+        total += ((e-c)/1000) * salary / paidSecondsInMonth(year,month);
+      }else{
+        total += Math.max(0,(month31-c)/1000) * salary / paidSecondsInMonth(year,month);
+        // The 31st itself is unpaid; nothing is added for [31st, monthEnd).
+      }
+    }
     c=e;
   }
   return Math.max(0,total);
@@ -511,14 +540,25 @@ function paidAmountBetween(a,b,salary){
 function monthlyPerSecond(year,month,salary){
   return salary/paidSecondsInMonth(year,month);
 }
-function paidBetween(a,b){
+function paidBetween(a,b,payStart){
   if(!a||!b||b<=a)return 0;
+  payStart = payStart || a;
   let total=0,c=new Date(a);
   while(c<b){
     const year=c.getFullYear(), month=c.getMonth();
     const next=new Date(year,month+1,1);
     const e=b<next?b:next;
-    if(c.getDate()!==31) total+=(e-c)/1000;
+    const segmentIsFirstPartial = sameMonth(c,payStart) && payStart.getDate()!==1;
+    if(segmentIsFirstPartial){
+      total += (e-c)/1000;
+    }else if(c.getDate()!==31){
+      const month31 = new Date(year,month,31,0,0,0,0);
+      if(month31>=e || month31<c){
+        total += (e-c)/1000;
+      }else{
+        total += Math.max(0,(month31-c)/1000);
+      }
+    }
     c=e;
   }
   return Math.max(0,total);
@@ -621,7 +661,7 @@ async function loadRates(){
   renderTicker();
   update();
 }
-function updateOvertime(end,signoff,now,salary){
+function updateOvertime(end,signoff,now,salary,payStart){
  const card=$("overtimeCard");
  if(!end || now<=end){
   card.classList.add("inactive"); card.classList.remove("active");
@@ -638,7 +678,7 @@ function updateOvertime(end,signoff,now,salary){
  card.classList.toggle("active",active);
  card.classList.toggle("inactive",!active);
  const seconds=Math.max(0,(effectiveNow-end)/1000);
- const earned=paidAmountBetween(end,effectiveNow,salary);
+ const earned=paidAmountBetween(end,effectiveNow,salary,payStart);
  const dayRate=salary/payableDaysInMonth(now.getFullYear(),now.getMonth());
  $("overtimeStatus").textContent=active?"CONTRACT ENDED • OVERTIME ACTIVE":"OVERTIME COMPLETED";
  $("overtimeTime").innerHTML=fmtDurationHTML(seconds);
@@ -708,8 +748,9 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
   const effectiveEnd=e && e<periodEnd?e:periodEnd;
   if(effectiveEnd<=effectiveStart)return;
 
-  const actual=(effectiveEnd-effectiveStart)/86400000;
-  const paid=s>=periodStart ? Math.max(actual,WOA_MIN_DAYS) : actual;
+  const actual=calendarDaysInclusive(effectiveStart,effectiveEnd);
+  const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
+  const paid=s>=periodStart ? Math.max(paidCalendar,WOA_MIN_DAYS) : paidCalendar;
   total += paid*(monthly/30);
  });
  return Math.max(0,total);
@@ -722,7 +763,7 @@ function archiveCompletedContract(start,end,signoff,salary){
  if(history.some(x=>x.key===key)) return;
 
  const contract=totalPaidContract(start,end,salary);
- const overtime=paidAmountBetween(end,signoff,salary);
+ const overtime=paidAmountBetween(end,signoff,salary,start);
  const woa=getWoaEarnedForPeriod(start,signoff);
  history.push({
   key,
@@ -756,7 +797,7 @@ function createTestContract(){
  }
 
  const contract=totalPaidContract(start,end,salary);
- const overtime=paidAmountBetween(end,signoff,salary);
+ const overtime=paidAmountBetween(end,signoff,salary,start);
 
  history.push({
   key,
@@ -804,9 +845,25 @@ function woaDate(v){
  const d=new Date(v+"T00:00:00");
  return isNaN(d.getTime())?null:d;
 }
-function woaActualDays(start,end){
+function calendarDaysInclusive(start,end){
  if(!start||!end||end<start)return 0;
- return Math.max(0,(end-start)/86400000);
+ const a=new Date(start.getFullYear(),start.getMonth(),start.getDate());
+ const b=new Date(end.getFullYear(),end.getMonth(),end.getDate());
+ return Math.floor((b-a)/86400000)+1;
+}
+function countPaidCalendarDays(start,end,payStart){
+ if(!start||!end||end<start)return 0;
+ let d=new Date(start.getFullYear(),start.getMonth(),start.getDate());
+ const last=new Date(end.getFullYear(),end.getMonth(),end.getDate());
+ let count=0;
+ while(d<=last){
+   if(isPaidCalendarDay(d,payStart))count++;
+   d.setDate(d.getDate()+1);
+ }
+ return count;
+}
+function woaActualDays(start,end){
+ return calendarDaysInclusive(start,end);
 }
 function calcWoaEntry(entry,monthly,asOf){
  const s=woaDate(entry.start);
@@ -814,20 +871,20 @@ function calcWoaEntry(entry,monthly,asOf){
 
  const e=woaDate(entry.end);
  const now=asOf instanceof Date ? asOf : new Date();
+ const payStart=getDate("start");
 
- // An open WOA entry is active from Start until now.
- // The 5-day minimum applies even before End is entered.
  if(!e){
   if(now < s)return {actual:0,paid:0,earned:0};
-  const actual=Math.max(0,(now-s)/86400000);
-  const paid=Math.max(actual,WOA_MIN_DAYS);
+  const endDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const actual=calendarDaysInclusive(s,endDay);
+  const paid=Math.max(countPaidCalendarDays(s,endDay,payStart),WOA_MIN_DAYS);
   return {actual,paid,earned:paid*(monthly/30)};
  }
 
  if(e<s)return {actual:0,paid:0,earned:0};
 
  const actual=woaActualDays(s,e);
- const paid=Math.max(actual,WOA_MIN_DAYS);
+ const paid=Math.max(countPaidCalendarDays(s,e,payStart),WOA_MIN_DAYS);
  return {actual,paid,earned:paid*(monthly/30)};
 }
 function validateWoaEntries(entries){
@@ -844,30 +901,27 @@ function getWoaEarned(asOf){
  if(monthly<=0 || !validateWoaEntries(entries).ok)return 0;
 
  const d=asOf instanceof Date ? asOf : new Date();
+ const payStart=getDate("start");
+ const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
  let total=0;
+ const daily=monthly/30;
 
  entries.forEach(entry=>{
   const s=woaDate(entry.start);
   const e=woaDate(entry.end);
-  if(!s || d<s)return;
+  if(!s || day<s)return;
 
-  const daily=monthly/30;
+  const effectiveEnd = e && day>e ? e : day;
+  if(effectiveEnd<s)return;
 
-  if(e && d>=e){
-   const actual=woaActualDays(s,e);
-   total += Math.max(actual,WOA_MIN_DAYS)*daily;
-  }else{
-   // Open entry, or current date is still inside the completed interval.
-   // The minimum 5 paid days applies immediately once WOA starts.
-   const actual=Math.max(0,(d-s)/86400000);
-   total += Math.max(actual,WOA_MIN_DAYS)*daily;
-  }
+  const paidDays=countPaidCalendarDays(s,effectiveEnd,payStart);
+  total += Math.max(paidDays,WOA_MIN_DAYS)*daily;
  });
 
  return Math.max(0,total);
 }
 function formatWoaDays(v){
- // WOA is displayed in whole days. Any started day counts as a day:
+ // WOA uses inclusive calendar days for completed entries:
  // 0.1..1.0 => 1 day, 1.01..2.0 => 2 days, etc.
  const n = Number(v) || 0;
  const days = n > 0 ? Math.ceil(n - 1e-9) : 0;
@@ -1013,7 +1067,7 @@ function earnedAtDate(date,start,end,signoff,now,salary){
  const actualLimit = signoff && signoff < now ? signoff : now;
  const d = date > actualLimit ? actualLimit : date;
 
- const regular = paidAmountBetween(start,d,salary);
+ const regular = paidAmountBetween(start,d,salary,start);
  const woa = getWoaEarned(d);
 
  return Math.max(0,regular + woa);
@@ -1159,8 +1213,8 @@ function earningsAtDate(asOf,start,end,signoff,now,salary){
  if(!d || !start || salary<=0) return {basic:0,overtime:0,woa:0,total:0};
 
  const basicEnd=end ? new Date(Math.min(d.getTime(),end.getTime())) : d;
- const basic=basicEnd>start ? paidAmountBetween(start,basicEnd,salary) : 0;
- const overtime=(end && d>end) ? paidAmountBetween(end,d,salary) : 0;
+ const basic=basicEnd>start ? paidAmountBetween(start,basicEnd,salary,start) : 0;
+ const overtime=(end && d>end) ? paidAmountBetween(end,d,salary,start) : 0;
  const woa=Math.max(0,getWoaEarned(d));
  return {basic,overtime,woa,total:basic+overtime+woa};
 }
@@ -1212,7 +1266,7 @@ function update(){
  updateBoardTime(start,end,signoff,now);
 
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
- let overtimeEarned=updateOvertime(end,signoff,now,salary);
+ let overtimeEarned=updateOvertime(end,signoff,now,salary,start);
  archiveCompletedContract(start,end,signoff,salary);
  renderEarningsBreakdown(earnings.basic,earnings.overtime,earnings.woa);
 
@@ -1257,7 +1311,7 @@ function update(){
 
  // Today earnings are broken down using the same components as Total Earned.
  let dayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
- let paidSecondsToday=paidBetween(dayStart,now);
+ let paidSecondsToday=paidBetween(dayStart,now,start);
  let basicToday=paidSecondsToday*currentPerSec;
 
  // Overtime earned today, only for time after Contract End.
@@ -1265,20 +1319,27 @@ function update(){
  if(end && now>end){
    const otStart=dayStart>end?dayStart:end;
    const otEnd=signoff && signoff<now?signoff:now;
-   if(otEnd>otStart) overtimeToday=paidAmountBetween(otStart,otEnd,salary);
+   if(otEnd>otStart) overtimeToday=paidAmountBetween(otStart,otEnd,salary,start);
  }
 
- // WOA earned today. Only the incremental amount attributable to today
- // is added to the Today block, while the minimum-5-day rule remains in
- // the overall WOA calculation.
- let woaToday=0;
- const todayBefore=new Date(now.getTime());
- todayBefore.setDate(todayBefore.getDate()-1);
- const totalWoaNow=getWoaEarned(now);
- const totalWoaBefore=getWoaEarned(dayStart);
- woaToday=Math.max(0,totalWoaNow-totalWoaBefore);
-
- let today=basicToday+overtimeToday+woaToday;
+ // WOA is a daily allowance. As soon as today falls inside a WOA
+// entry, the full daily WOA amount is credited for Today.
+// This is separate from the overall 5-day minimum calculation.
+let woaToday=0;
+const woaMonthlyToday=parseFloat($("woaBasicWage")?.value)||0;
+const woaDailyToday=woaMonthlyToday/30;
+const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+const woaEntriesToday=getWoaEntries();
+const payStartForToday=start;
+if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
+  woaEntriesToday.forEach(entry=>{
+    const ws=woaDate(entry.start);
+    const we=woaDate(entry.end);
+    if(!ws || todayStart<ws)return;
+    if(we && todayStart>we)return;
+    woaToday += woaDailyToday;
+  });
+} let today=basicToday+overtimeToday+woaToday;
  $("todayEarnBig").textContent=fmtUSD(today);
 
  if($("todayBasic"))$("todayBasic").textContent=fmtUSD(basicToday);
@@ -1294,21 +1355,21 @@ function update(){
 
  let f=getDate("forecast");
  if(f&&start){
-  let fe=paidAmountBetween(start,f,salary);
+  let fe=paidAmountBetween(start,f,salary,start);
   $("forecastEarn").textContent=fmtUSD(fe);
   $("forecastLeft").textContent=fmtUSD(Math.max(0,fe-earned));
  }
- updateSleep(currentPerSec);
+ updateSleep(currentPerSec,start);
  save();
  try{renderSalaryGraph(start,end,signoff,now,salary,earned);}catch(e){console.error(e);}
 }
-function updateSleep(perSec){
+function updateSleep(perSec,payStart){
  let ss=$("sleepStart").value,se=$("sleepEnd").value;if(!ss||!se)return;
  let now=new Date(),s=ss.split(":").map(Number),e=se.split(":").map(Number);
  let a=new Date(now.getFullYear(),now.getMonth(),now.getDate(),s[0],s[1]);
  let b=new Date(now.getFullYear(),now.getMonth(),now.getDate(),e[0],e[1]);
  if(b<=a)b.setDate(b.getDate()+1);
- let sec=paidBetween(a,b);$("sleepEarn").textContent=fmtUSD(sec*perSec);
+ let sec=paidBetween(a,b,payStart);$("sleepEarn").textContent=fmtUSD(sec*perSec);
 }
 ["salary","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");$("earningsGoal").value="";initDates();$("salary").value=5100;update()};
@@ -1322,6 +1383,6 @@ if(savedGoal!==null) $("earningsGoal").value=savedGoal;
 $("earningsGoal").addEventListener("input",()=>{localStorage.setItem("salaryTrackerEarningsGoal",$("earningsGoal").value);update();});
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.9.2 • Build 2026-08-24</div>
+<div class="app-version">Salary Tracker • v0.9.5 • Build 2026-08-25</div>
 </body>
 </html>
