@@ -279,6 +279,26 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  </div>
 </div>
 
+<div class="card today-card" id="todayCard">
+ <div class="section-title">TODAY</div>
+ <div class="today-main">
+  <div class="small">EARNED TODAY</div>
+  <div class="today-amount" id="todayEarnBig">$0.00</div>
+ </div>
+ <div class="progress" style="margin-top:14px"><div class="bar" id="todayProgressBar"></div></div>
+ <div class="progress-meta">
+  <span id="todayProgress">0%</span>
+  <span id="todayLeft">--</span>
+ </div>
+ <div class="row"><span>Paid time today</span><span id="todayPaidTime">0D 00:00:00</span></div>
+ <div class="row"><span>Basic Salary</span><span id="todayBasic">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="todayOvertime">$0.00</span></div>
+ <div class="row"><span>WOA</span><span id="todayWoa">$0.00</span></div>
+ <div class="row"><span>31st day status</span><span id="day31">Paid</span></div>
+ <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
+</div>
+
+
 
 <div class="card" id="earningsGoalCard">
  
@@ -329,25 +349,6 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <div class="box"><div class="small">Russian rubles</div><div class="value" id="rub">₽0.00</div><div class="rate" id="rubRate">Central Bank rate: loading...</div></div>
   <div class="box"><div class="small">Euro</div><div class="value" id="eur">€0.00</div><div class="rate" id="eurRate">Central Bank rate: loading...</div></div>
  </div>
-</div>
-
-<div class="card today-card" id="todayCard">
- <div class="section-title">TODAY</div>
- <div class="today-main">
-  <div class="small">EARNED TODAY</div>
-  <div class="today-amount" id="todayEarnBig">$0.00</div>
- </div>
- <div class="progress" style="margin-top:14px"><div class="bar" id="todayProgressBar"></div></div>
- <div class="progress-meta">
-  <span id="todayProgress">0%</span>
-  <span id="todayLeft">--</span>
- </div>
- <div class="row"><span>Paid time today</span><span id="todayPaidTime">0D 00:00:00</span></div>
- <div class="row"><span>Basic Salary</span><span id="todayBasic">$0.00</span></div>
- <div class="row"><span>Overtime</span><span id="todayOvertime">$0.00</span></div>
- <div class="row"><span>WOA</span><span id="todayWoa">$0.00</span></div>
- <div class="row"><span>31st day status</span><span id="day31">Paid</span></div>
- <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
 </div>
 
 <div class="card overtime-card inactive" id="overtimeCard">
