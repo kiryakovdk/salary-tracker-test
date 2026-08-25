@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.9.7</title>
+<title>Salary Tracker v0.9.8</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -291,7 +291,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   <span id="todayLeft">--</span>
  </div>
  <div class="row"><span>Paid time today</span><span id="todayPaidTime">0D 00:00:00</span></div>
- <div class="row"><span>Travel to vessel</span><span id="todayTravel">$0.00</span></div>
+ <div class="row"><span>Travel to vessel (today)</span><span id="todayTravel">$0.00</span></div>
  <div class="row"><span>Basic Salary</span><span id="todayBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="todayOvertime">$0.00</span></div>
  <div class="row"><span>WOA</span><span id="todayWoa">$0.00</span></div>
@@ -449,7 +449,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 </div>
 
 <footer>
-Salary is calculated over 30 paid days per month. Travel to vessel is paid as Basic Salary and can start before Pay Start. In 31-day months, the 31st day is not paid, except when it falls in the first partial earning month.<br>
+Salary is calculated over 30 paid days per month. Travel to vessel is paid at the Basic Wage rate and ends on Pay Start. In 31-day months, the 31st day is not paid, except when it falls in the first partial earning month.<br>
 USD/RUB, EUR/RUB and CNY/RUB rates are loaded from the official Central Bank of Russia. Rates refresh every 6 hours. Data is stored in the browser.
 </footer>
 
@@ -785,7 +785,10 @@ function archiveCompletedContract(start,end,signoff,salary){
 
  const basicWage=parseFloat($("woaBasicWage")?.value)||0;
  const contractOnboard=totalPaidContract(start,end,salary);
- const travel=travelEarnedBetween(start,signoff,basicWage,start);
+ const travelStart=getTravelStart();
+ const travel=travelStart && travelStart<start
+   ? travelEarnedBetween(travelStart,start,basicWage,start)
+   : 0;
  const contract=contractOnboard+travel;
  const overtime=paidAmountBetween(end,signoff,salary,start);
  const woa=getWoaEarnedForPeriod(start,signoff);
@@ -1472,6 +1475,6 @@ if(savedGoal!==null) $("earningsGoal").value=savedGoal;
 $("earningsGoal").addEventListener("input",()=>{localStorage.setItem("salaryTrackerEarningsGoal",$("earningsGoal").value);update();});
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.9.7 • Build 2026-08-25</div>
+<div class="app-version">Salary Tracker • v0.9.8 • Build 2026-08-25</div>
 </body>
 </html>
