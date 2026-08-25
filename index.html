@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.9.8</title>
+<title>Salary Tracker v0.9.9</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -996,6 +996,7 @@ function renderWoa(){
  w.style.color=check.ok?"":"#e6a45b";
 }
 
+// Recalculate WOA visible day totals as time advances.
 function refreshWoaStats(){
  const container=$("woaEntries");
  if(!container)return;
@@ -1439,6 +1440,7 @@ if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
   $("forecastEarn").textContent=fmtUSD(fe);
   $("forecastLeft").textContent=fmtUSD(Math.max(0,fe-earned));
  }
+ refreshWoaStats();
  updateSleep(currentPerSec,start);
  save();
  try{renderSalaryGraph(start,end,signoff,now,salary,earned);}catch(e){console.error(e);}
@@ -1475,6 +1477,6 @@ if(savedGoal!==null) $("earningsGoal").value=savedGoal;
 $("earningsGoal").addEventListener("input",()=>{localStorage.setItem("salaryTrackerEarningsGoal",$("earningsGoal").value);update();});
 load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 </script>
-<div class="app-version">Salary Tracker • v0.9.8 • Build 2026-08-25</div>
+<div class="app-version">Salary Tracker • v0.9.9 • Build 2026-08-26</div>
 </body>
 </html>
