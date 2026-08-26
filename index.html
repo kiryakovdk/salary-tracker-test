@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.9.9</title>
+<title>Salary Tracker v0.9.10</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -262,7 +262,7 @@ body{padding-bottom:88px}
 .nav-btn:active{transform:scale(.98)}
 .screen-card{display:none}
 .screen-card.screen-home{display:block}
-.more-subhint{font-size:10px;color:var(--muted);margin:-2px 0 8px}
+.more-subhint{font-size:10px;color:var(--muted);margin:-2px 0 8px}.screen-info{display:none}.screen-info.screen-more{display:none}
 @media(min-width:800px){
  .bottom-nav{left:50%;right:auto;transform:translateX(-50%);width:min(760px,100%);border:1px solid #202a30;border-bottom:0;border-radius:16px 16px 0 0}
 }
@@ -458,7 +458,7 @@ body{padding-bottom:88px}
  <div class="row" style="margin-top:10px"><span>Earned while asleep</span><span id="sleepEarn">$0.00</span></div>
 </div>
 
-<div class="card">
+<div class="card screen-card screen-more" id="settingsCard">
  <div class="section-title">SETTINGS</div>
  <div class="grid">
   <div><label>Monthly salary, USD</label><input id="salary" type="number" min="0" step=".01" value="5100"></div>
@@ -476,10 +476,10 @@ body{padding-bottom:88px}
  </div>
 </div>
 
-<footer>
+<div class="screen-info screen-more"><footer>
 Salary is calculated over 30 paid days per month. Travel to vessel is paid at the Basic Wage rate and ends on Pay Start. In 31-day months, the 31st day is not paid, except when it falls in the first partial earning month.<br>
 USD/RUB, EUR/RUB and CNY/RUB rates are loaded from the official Central Bank of Russia. Rates refresh every 6 hours. Data is stored in the browser.
-</footer>
+</footer></div>
 
 </div>
 
@@ -1511,6 +1511,9 @@ function setScreen(screen){
  cards.forEach(card=>{
    card.style.display=card.classList.contains("screen-"+screen)?"block":"none";
  });
+ document.querySelectorAll(".screen-info").forEach(info=>{
+   info.style.display=info.classList.contains("screen-"+screen)?"block":"none";
+ });
  document.querySelectorAll(".nav-btn").forEach(btn=>{
    const active=btn.dataset.screen===screen;
    btn.classList.toggle("active",active);
@@ -1526,7 +1529,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.9.9 • Build 2026-08-26</div>
+<div class="app-version">Salary Tracker • v0.9.10 • Build 2026-08-27</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
