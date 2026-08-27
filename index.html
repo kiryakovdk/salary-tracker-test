@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.9.11</title>
+<title>Salary Tracker v0.10.0</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -388,6 +388,40 @@ input:focus{
   .today-card,.overtime-card,.forecast,.stats,.bottom-nav{
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
+  }
+}
+
+
+/* ---------- iPhone bottom navigation alignment ---------- */
+.bottom-nav{
+  bottom:0 !important;
+  padding-bottom:0 !important;
+  min-height:112px;
+  display:flex;
+  align-items:flex-start;
+}
+.bottom-nav::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:100%;
+  height:calc(24px + env(safe-area-inset-bottom));
+  background:rgba(10,15,18,.76);
+  border-top:0;
+  pointer-events:none;
+  -webkit-backdrop-filter:blur(28px) saturate(150%);
+  backdrop-filter:blur(28px) saturate(150%);
+}
+.bottom-nav-inner{
+  width:100%;
+  transform:translateY(50px);
+  padding-bottom:8px;
+}
+@media(min-width:800px){
+  .bottom-nav{
+    min-height:112px;
+    border-bottom:0;
   }
 }
 
@@ -1652,7 +1686,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.9.11 • Build 2026-08-27</div>
+<div class="app-version">Salary Tracker • v0.10.0 • Build 2026-08-27</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
