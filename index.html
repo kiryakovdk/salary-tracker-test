@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.9.10</title>
+<title>Salary Tracker v0.9.11</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -237,7 +237,7 @@ footer{text-align:center;color:#56626a;font-size:10px;margin-top:18px;line-heigh
  .stats{grid-template-columns:repeat(2,1fr)}
 }
 
-html,body{max-width:100%;overflow-x:hidden}
+html{min-height:100%;background:#050709}html,body{min-height:100%;max-width:100%;overflow-x:hidden}
 html,body{width:100%;max-width:100%;overflow-x:hidden}
 
 /* ---------- Mobile bottom navigation ---------- */
@@ -278,7 +278,6 @@ body{padding-bottom:88px}
 
 </head>
 <body>
-<div class="section-title">EARNINGS GOAL</div>
 <div class="wrap">
 <header>
  <h1>⚓ SALARY TRACKER</h1><div class="badge">LIVE</div>
@@ -441,7 +440,7 @@ body{padding-bottom:88px}
  </div>
 </div>
 
-<div class="card screen-card screen-more" id="forecastCard">
+<div class="card screen-card screen-earnings" id="forecastCard">
  <div class="section-title">FORECAST</div>
  <div class="forecast">
   <div class="bigbox"><div class="small">Earned by selected date</div><b id="forecastEarn">$0.00</b></div>
@@ -1529,7 +1528,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.9.10 • Build 2026-08-27</div>
+<div class="app-version">Salary Tracker • v0.9.11 • Build 2026-08-27</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
