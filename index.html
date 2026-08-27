@@ -392,31 +392,41 @@ input:focus{
 }
 
 
-/* ---------- iPhone bottom navigation alignment ---------- */
+/* ---------- Stable iPhone bottom navigation ---------- */
 .bottom-nav{
-  bottom:0 !important;
-  padding-bottom:0 !important;
-  min-height:112px;
-  display:flex;
-  align-items:flex-start;
-}
-.bottom-nav::after{
-  content:"";
-  position:absolute;
+  position:fixed;
   left:0;
   right:0;
-  top:100%;
-  height:calc(24px + env(safe-area-inset-bottom));
-  background:rgba(10,15,18,.76);
-  border-top:0;
-  pointer-events:none;
-  -webkit-backdrop-filter:blur(28px) saturate(150%);
-  backdrop-filter:blur(28px) saturate(150%);
+  bottom:0 !important;
+  z-index:1000;
+  box-sizing:border-box;
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  min-height:0;
+  display:block;
 }
 .bottom-nav-inner{
   width:100%;
-  transform:translateY(50px);
-  padding-bottom:8px;
+  max-width:760px;
+  margin:0 auto;
+  transform:none !important;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+}
+.nav-btn{
+  min-height:52px;
+}
+@media(min-width:800px){
+  .bottom-nav{
+    left:50%;
+    right:auto;
+    transform:translateX(-50%);
+    width:min(760px,100%);
+    min-height:0;
+  }
+  .bottom-nav-inner{
+    transform:none !important;
+  }
 }
 @media(min-width:800px){
   .bottom-nav{
