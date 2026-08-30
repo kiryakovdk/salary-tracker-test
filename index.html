@@ -549,18 +549,6 @@ input:focus{
  <div class="progress-meta"><span id="earningsGoalProgress">Set a target</span><span id="earningsGoalRemaining">Remaining: —</span></div>
 </div>
 
-<div class="card screen-card screen-home" id="earningsBreakdown">
- <div class="section-title">CURRENT EARNINGS</div>
- <div class="row"><span>Travel to vessel</span><span id="breakdownTravel">$0.00</span></div>
- <div class="row"><span>Basic Salary</span><span id="breakdownBasic">$0.00</span></div>
- <div class="row"><span>Overtime</span><span id="breakdownOvertime">$0.00</span></div>
- <div class="row"><span>WOA</span><span id="breakdownWoa">$0.00</span></div>
- <div class="row"><span>Travel expenses reimbursed</span><span id="breakdownTravelExpense">$0.00</span></div>
- <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="breakdownTotal">$0.00</span></div>
-</div>
-
-
-
 <div class="card screen-card screen-contract" id="contractStatusCard">
  <div class="section-title">CONTRACT STATUS</div>
  <div class="progress"><div class="bar" id="bar"></div></div>
@@ -1506,16 +1494,7 @@ function earningsAtDate(asOf,start,end,signoff,now,salary){
  return {travel,basic,overtime,woa,expense,total:Math.max(0,travel+basic+overtime+woa+expense)};
 }
 
-function renderEarningsBreakdown(basic,overtime,woa,travel=0,expense=0){
- const gross=Math.max(0,(Number(basic)||0)+(Number(travel)||0)+(Number(overtime)||0)+(Number(woa)||0));
- const total=Math.max(0,gross+(Number(expense)||0));
- if($("breakdownTravel"))$("breakdownTravel").textContent=fmtUSD(travel);
- if($("breakdownTravelExpense"))$("breakdownTravelExpense").textContent=expense>0?"+"+fmtUSD(expense).slice(1):"$0.00";
- $("breakdownBasic").textContent=fmtUSD(basic);
- $("breakdownOvertime").textContent=fmtUSD(overtime);
- $("breakdownWoa").textContent=fmtUSD(woa);
- $("breakdownTotal").textContent=fmtUSD(total);
-}
+
 
 function updateEarningsGoal(currentEarned, salary, now){
  const target=Math.max(0,parseFloat($("earningsGoal").value)||0);
@@ -1731,7 +1710,7 @@ function update(){
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary,start);
  archiveCompletedContract(start,end,signoff,salary);
- renderEarningsBreakdown(earnings.basic,earnings.overtime,earnings.woa,earnings.travel,earnings.expense);
+
  renderContractMonths(now,start,end,signoff,travelStart,salary,basicWageNow,getTravelExpenses());
 
  // The large headline and the breakdown use exactly the same components.
