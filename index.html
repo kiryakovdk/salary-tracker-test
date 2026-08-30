@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.12.3</title>
+<title>Salary Tracker v0.13.0</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -456,6 +456,26 @@ input:focus{
 .contract-month-summary:last-child{border-bottom:0}
 .contract-month-summary span:last-child{font-weight:700}
 
+
+.history-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.history-item-rich{margin-bottom:10px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.025);overflow:hidden}
+.history-item-rich summary{list-style:none;cursor:pointer;padding:13px 14px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.history-item-rich summary::-webkit-details-marker{display:none}
+.history-item-rich summary:after{content:"⌄";color:var(--muted);font-size:14px}
+.history-item-rich[open] summary:after{content:"⌃"}
+.history-contract-title{font-weight:750;font-size:14px}
+.history-contract-date{font-size:10px;color:var(--muted);margin-top:3px}
+.history-contract-total{font-size:18px;color:var(--green);font-weight:780;align-self:center}
+.history-detail{padding:0 14px 14px}
+.history-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.history-detail-grid .row{margin:0}
+.history-month{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+.history-month-head{display:flex;justify-content:space-between;gap:8px;font-weight:750}
+.history-month-lines{margin-top:4px}
+.history-month-line{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px;padding:3px 0}
+.history-month-line.total{color:var(--text);font-weight:700}
+@media(max-width:520px){.history-actions,.history-detail-grid{grid-template-columns:1fr}}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
@@ -621,20 +641,15 @@ input:focus{
 
 <div class="card screen-card screen-history" id="historyCard">
  <div class="section-title">CONTRACT HISTORY</div>
- <div id="historyList">
-  <div class="small">No completed contracts yet.</div>
+ <div id="historyList"><div class="small">No completed contracts yet.</div></div>
+ <div class="history-actions">
+  <button id="testContract" class="secondary" type="button">TEST CONTRACT</button>
+  <button id="clearTestHistory" class="secondary" type="button">CLEAR TEST HISTORY</button>
  </div>
- <button id="testContract" class="secondary" type="button" style="margin-top:12px;width:100%">TEST CONTRACT</button>
- <button id="clearTestHistory" class="secondary" type="button" style="margin-top:8px;width:100%">CLEAR TEST HISTORY</button>
- <div class="row" style="margin-top:10px">
-  <span>Total contracts</span><span id="historyCount">0</span>
+ <div class="row" style="margin-top:12px"><span>Total contracts</span><span id="historyCount">0</span></div>
+ <div class="row"><span>Total earned</span><span id="historyTotal">$0.00</span></div>
  </div>
- <div class="row">
-  <span>Total earned</span><span id="historyTotal">$0.00</span>
- </div>
-</div>
-
-<div class="card screen-card screen-contract" id="forecastCard">
+ <div class="card screen-card screen-contract" id="forecastCard">
  <div class="section-title">FORECAST</div>
  <div class="forecast">
   <div class="bigbox"><div class="small">Earned by selected date</div><b id="forecastEarn">$0.00</b></div>
@@ -953,10 +968,7 @@ function saveHistory(history){
 
 function renderAllTime(){
  const history=getHistory();
- const contract=history.reduce((s,x)=>s+(Number(x.contract)||0),0);
- const overtime=history.reduce((s,x)=>s+(Number(x.overtime)||0),0);
- const woa=history.reduce((s,x)=>s+(Number(x.woa)||0),0);
- const total=contract+overtime+woa;
+ const total=history.reduce((s,x)=>s+(Number(x.total)||((Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0))),0);
  $("allTimeTotal").textContent=fmtUSD(total);
  $("allTimeContracts").textContent=history.length;
 }
@@ -970,19 +982,50 @@ function renderHistory(){
  $("historyTotal").textContent=fmtUSD(total);
 
  if(!history.length){
-  list.innerHTML='<div class="small">No completed contracts yet.</div>';
-  return;
+   list.innerHTML='<div class="small">No completed contracts yet.</div>';
+   return;
  }
 
- list.innerHTML=history.slice().reverse().map((x,i)=>`
-  <div class="history-item">
-   <div class="history-head">
-    <div class="history-title">Contract #${history.length-i}</div>
-    <div class="history-date">${x.start} → ${x.signoff}</div>
-   </div>
-   <div class="history-total">${fmtUSD(x.total)}</div>
-  </div>
- `).join("");
+ list.innerHTML=history.slice().reverse().map((x,i)=>{
+   const number=history.length-i;
+   const travel=Number(x.travel)||0;
+   const basic=Number(x.basic ?? x.contractOnboard ?? (Number(x.contract)||0)-travel-(Number(x.travelExpense)||0))||0;
+   const overtime=Number(x.overtime)||0;
+   const woa=Number(x.woa)||0;
+   const expense=Number(x.travelExpense)||0;
+   const months=Array.isArray(x.months)?x.months:[];
+   return `<details class="history-item-rich">
+     <summary>
+      <div>
+       <div class="history-contract-title">Contract #${number}${x.test?" • TEST":""}</div>
+       <div class="history-contract-date">${x.start} → ${x.signoff}</div>
+      </div>
+      <div class="history-contract-total">${fmtUSD(x.total)}</div>
+     </summary>
+     <div class="history-detail">
+      <div class="history-detail-grid">
+       <div class="row"><span>Travel to vessel</span><span>${fmtUSD(travel)}</span></div>
+       <div class="row"><span>Basic Salary</span><span>${fmtUSD(basic)}</span></div>
+       <div class="row"><span>Overtime</span><span>${fmtUSD(overtime)}</span></div>
+       <div class="row"><span>WOA</span><span>${fmtUSD(woa)}</span></div>
+       <div class="row"><span>Travel expenses</span><span>${fmtUSD(expense)}</span></div>
+       <div class="row total-earned-row"><span>Contract total</span><span>${fmtUSD(x.total)}</span></div>
+      </div>
+      ${months.length?`<div class="history-month"><div class="small">MONTHLY BREAKDOWN</div>
+       ${months.map(month=>`<div class="history-month">
+        <div class="history-month-head"><span>${month.label}</span><span>${fmtUSD(month.total||0)}</span></div>
+        <div class="history-month-lines">
+         <div class="history-month-line"><span>Travel</span><span>${fmtUSD(month.travel||0)}</span></div>
+         <div class="history-month-line"><span>Basic Salary</span><span>${fmtUSD(month.basic||0)}</span></div>
+         <div class="history-month-line"><span>Overtime</span><span>${fmtUSD(month.overtime||0)}</span></div>
+         <div class="history-month-line"><span>WOA</span><span>${fmtUSD(month.woa||0)}</span></div>
+         <div class="history-month-line"><span>Travel expenses</span><span>${fmtUSD(month.expense||0)}</span></div>
+         <div class="history-month-line total"><span>Month total</span><span>${fmtUSD(month.total||0)}</span></div>
+        </div>
+       </div>`).join("")}</div>`:""}
+     </div>
+    </details>`;
+ }).join("");
 }
 function getWoaEarnedForPeriod(periodStart,periodEnd){
  const monthly=parseFloat($("woaBasicWage")?.value)||0;
@@ -1010,10 +1053,11 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
 }
 
 function archiveCompletedContract(start,end,signoff,salary){
- if(!start||!end||!signoff||signoff<=end||signoff>new Date()) return;
+ if(!start||!end||!signoff||signoff<=end||signoff>new Date())return;
+
  const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
  const history=getHistory();
- if(history.some(x=>x.key===key)) return;
+ if(history.some(x=>x.key===key))return;
 
  const basicWage=parseFloat($("woaBasicWage")?.value)||0;
  const contractOnboard=totalPaidContract(start,end,salary);
@@ -1025,19 +1069,27 @@ function archiveCompletedContract(start,end,signoff,salary){
  const contract=contractOnboard+travel+travelExpense;
  const overtime=paidAmountBetween(end,signoff,salary,start);
  const woa=getWoaEarnedForPeriod(start,signoff);
+ const total=contract+overtime+woa;
+
+ const months=typeof buildContractMonths==="function"
+   ? buildContractMonths(signoff,start,end,signoff,travelStart,salary,basicWage,travelExpense)
+   : [];
+
  history.push({
-  key,
-  start:start.toLocaleDateString("en-US"),
-  end:end.toLocaleDateString("en-US"),
-  signoff:signoff.toLocaleDateString("en-US"),
-  salary,
-  travel,
-  travelExpense,
-  contract,
-  overtime,
-  woa,
-  overtimeTime:fmtDuration((signoff-end)/1000),
-  total:contract+overtime+woa
+   key,
+   start:start.toLocaleDateString("en-US"),
+   end:end.toLocaleDateString("en-US"),
+   signoff:signoff.toLocaleDateString("en-US"),
+   salary,
+   basic:contractOnboard,
+   travel,
+   travelExpense,
+   contract,
+   overtime,
+   woa,
+   overtimeTime:fmtDuration((signoff-end)/1000),
+   months,
+   total
  });
  saveHistory(history);
  renderHistory();
@@ -1049,31 +1101,21 @@ function createTestContract(){
  const start=new Date(2026,0,1,0,0,0);
  const end=new Date(2026,0,10,0,0,0);
  const signoff=new Date(2026,0,12,0,0,0);
-
  const key=["TEST",start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
  const history=getHistory();
-
- if(history.some(x=>x.key===key)){
-  renderHistory();
-  return;
- }
-
+ if(history.some(x=>x.key===key)){renderHistory();return;}
  const contract=totalPaidContract(start,end,salary);
  const overtime=paidAmountBetween(end,signoff,salary,start);
-
+ const months=typeof buildContractMonths==="function"
+   ? buildContractMonths(signoff,start,end,signoff,null,salary,0,0):[];
  history.push({
-  key,
-  test:true,
-  start:start.toLocaleDateString("en-US"),
-  end:end.toLocaleDateString("en-US"),
-  signoff:signoff.toLocaleDateString("en-US"),
-  salary,
-  contract,
-  overtime,
-  overtimeTime:fmtDuration((signoff-end)/1000),
-  total:contract+overtime
+   key,test:true,start:start.toLocaleDateString("en-US"),
+   end:end.toLocaleDateString("en-US"),
+   signoff:signoff.toLocaleDateString("en-US"),
+   salary,basic:contract,travel:0,travelExpense:0,contract,
+   overtime,woa:0,overtimeTime:fmtDuration((signoff-end)/1000),
+   months,total:contract+overtime
  });
-
  saveHistory(history);
  renderHistory();
 }
@@ -1892,7 +1934,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.12.3 • Build 2026-08-30</div>
+<div class="app-version">Salary Tracker • v0.13.0 • Build 2026-08-30</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
