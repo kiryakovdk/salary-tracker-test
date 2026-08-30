@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.12.2</title>
+<title>Salary Tracker v0.12.3</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -484,7 +484,7 @@ input:focus{
 
 
 <div class="card hero screen-card screen-home" id="heroCard">
- <div class="kicker">EARNED SINCE PAY START</div>
+ <div class="kicker">TOTAL EARNED</div>
  <div class="amount" id="usd">$0.00</div>
  <div class="live" id="liveStatus">EARNING RUNNING</div>
  <div class="stats">
@@ -511,7 +511,7 @@ input:focus{
  <div class="row"><span>Basic Salary</span><span id="todayBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="todayOvertime">$0.00</span></div>
  <div class="row"><span>WOA</span><span id="todayWoa">$0.00</span></div>
- <div class="row"><span>Travel expenses reimbursed</span><span id="todayTravelExpense">$0.00</span></div>
+ 
  <div class="row"><span>31st day status</span><span id="day31">Paid</span></div>
  <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
 </div>
@@ -1503,14 +1503,14 @@ function earningsAtDate(asOf,start,end,signoff,now,salary){
  const woa=Math.max(0,getWoaEarned(d));
 
  const expense=firstEarningMonthExpense(d,start);
- return {travel,basic,overtime,woa,expense,total:Math.max(0,travel+basic+overtime+woa-expense)};
+ return {travel,basic,overtime,woa,expense,total:Math.max(0,travel+basic+overtime+woa+expense)};
 }
 
 function renderEarningsBreakdown(basic,overtime,woa,travel=0,expense=0){
  const gross=Math.max(0,(Number(basic)||0)+(Number(travel)||0)+(Number(overtime)||0)+(Number(woa)||0));
  const total=Math.max(0,gross+(Number(expense)||0));
  if($("breakdownTravel"))$("breakdownTravel").textContent=fmtUSD(travel);
- if($("breakdownTravelExpense"))$("breakdownTravelExpense").textContent=expense>0?"-"+fmtUSD(expense).slice(1):"$0.00";
+ if($("breakdownTravelExpense"))$("breakdownTravelExpense").textContent=expense>0?"+"+fmtUSD(expense).slice(1):"$0.00";
  $("breakdownBasic").textContent=fmtUSD(basic);
  $("breakdownOvertime").textContent=fmtUSD(overtime);
  $("breakdownWoa").textContent=fmtUSD(woa);
@@ -1820,17 +1820,14 @@ if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
     if(we && todayStart>we)return;
     woaToday += woaDailyToday;
   });
-} const todayExpense = (start && now>=start && now<new Date(start.getFullYear(),start.getMonth()+1,1))
-   ? getTravelExpenses()
-   : 0;
- let today=basicToday+overtimeToday+woaToday+todayExpense;
+} let today=basicToday+overtimeToday+woaToday;
  $("todayEarnBig").textContent=fmtUSD(Math.max(0,today));
 
  if($("todayTravel"))$("todayTravel").textContent=fmtUSD(travelToday);
  if($("todayBasic"))$("todayBasic").textContent=fmtUSD(onboardBasicToday);
  if($("todayOvertime"))$("todayOvertime").textContent=fmtUSD(overtimeToday);
  if($("todayWoa"))$("todayWoa").textContent=fmtUSD(woaToday);
- if($("todayTravelExpense"))$("todayTravelExpense").textContent=todayExpense>0?"-"+fmtUSD(todayExpense).slice(1):"$0.00";
+
 
  let dayProgress=is31?0:Math.min(100,(paidSecondsToday/86400)*100);
  $("todayProgressBar").style.width=dayProgress+"%";
@@ -1916,7 +1913,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.12.2 • Build 2026-08-30</div>
+<div class="app-version">Salary Tracker • v0.12.3 • Build 2026-08-30</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
