@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.10.0</title>
+<title>Salary Tracker v0.12.0</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -435,6 +435,27 @@ input:focus{
   }
 }
 
+
+.contract-month-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.contract-month-tabs::-webkit-scrollbar{display:none}
+.contract-month-tab{
+  flex:0 0 auto;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.035);
+  color:var(--muted);border-radius:12px;padding:9px 13px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)
+}
+.contract-month-tab.active{
+  color:var(--green);border-color:rgba(104,226,163,.24);
+  background:linear-gradient(145deg,rgba(95,227,163,.14),rgba(255,255,255,.04));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)
+}
+.contract-month-label{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.contract-month-total{font-size:36px;font-weight:780;color:var(--green);letter-spacing:-1px;margin-top:3px}
+.contract-month-subtitle{font-size:11px;color:var(--muted);margin:0 0 10px}
+.contract-month-list{margin-top:14px;border-top:1px solid rgba(255,255,255,.08);padding-top:6px}
+.contract-month-summary{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.055);font-size:12px}
+.contract-month-summary:last-child{border-bottom:0}
+.contract-month-summary span:last-child{font-weight:700}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
@@ -490,13 +511,29 @@ input:focus{
  <div class="row"><span>Basic Salary</span><span id="todayBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="todayOvertime">$0.00</span></div>
  <div class="row"><span>WOA</span><span id="todayWoa">$0.00</span></div>
+ <div class="row"><span>Travel expenses reimbursed</span><span id="todayTravelExpense">$0.00</span></div>
  <div class="row"><span>31st day status</span><span id="day31">Paid</span></div>
  <div class="row"><span>Monthly calculation</span><span id="monthRule">—</span></div>
 </div>
 
 
 
-<div class="card screen-card screen-earnings" id="earningsGoalCard">
+<div class="card screen-card screen-contract" id="contractMonthlyCard">
+ <div class="section-title">CONTRACT EARNINGS</div>
+ <div class="contract-month-tabs" id="contractMonthTabs"></div>
+ <div class="contract-month-label" id="contractMonthLabel">—</div>
+ <div class="contract-month-total" id="contractMonthTotal">$0.00</div>
+ <div class="contract-month-subtitle">Earned in selected month</div>
+ <div class="row"><span>Travel to vessel</span><span id="monthTravel">$0.00</span></div>
+ <div class="row"><span>Basic Salary</span><span id="monthBasic">$0.00</span></div>
+ <div class="row"><span>Overtime</span><span id="monthOvertime">$0.00</span></div>
+ <div class="row"><span>WOA</span><span id="monthWoa">$0.00</span></div>
+ <div class="row"><span>Travel expenses reimbursed</span><span id="monthExpense">$0.00</span></div>
+ <div class="row total-earned-row"><span>Month total</span><span id="monthTotalRow">$0.00</span></div>
+ <div class="contract-month-list" id="contractMonthList"></div>
+</div>
+
+<div class="card screen-card screen-contract" id="earningsGoalCard">
  
  <div class="grid">
   <div>
@@ -518,12 +555,13 @@ input:focus{
  <div class="row"><span>Basic Salary</span><span id="breakdownBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="breakdownOvertime">$0.00</span></div>
  <div class="row"><span>WOA</span><span id="breakdownWoa">$0.00</span></div>
+ <div class="row"><span>Travel expenses reimbursed</span><span id="breakdownTravelExpense">$0.00</span></div>
  <div class="row total-earned-row"><span>TOTAL EARNED</span><span id="breakdownTotal">$0.00</span></div>
 </div>
 
 
 
-<div class="card screen-card screen-earnings" id="contractStatusCard">
+<div class="card screen-card screen-contract" id="contractStatusCard">
  <div class="section-title">CONTRACT STATUS</div>
  <div class="progress"><div class="bar" id="bar"></div></div>
  <div class="progress-meta"><span id="progressText">0%</span><span id="remaining">Remaining: --</span></div>
@@ -548,7 +586,7 @@ input:focus{
  </div>
 </div>
 
-<div class="card overtime-card inactive screen-card screen-earnings" id="overtimeCard">
+<div class="card overtime-card inactive screen-card screen-contract" id="overtimeCard">
  <div class="section-title">OVERTIME</div>
  <div class="small" id="overtimeStatus">After contract end</div>
  <div class="forecast">
@@ -574,7 +612,7 @@ input:focus{
  </div>
 </div>
 
-<div class="card screen-card screen-earnings" id="salaryGraphCard">
+<div class="card screen-card screen-contract" id="salaryGraphCard">
  <div class="section-title">SALARY PROGRESS</div>
  <div id="salaryGraph" class="salary-graph"></div>
  <div class="chart-legend">
@@ -608,7 +646,7 @@ input:focus{
  </div>
 </div>
 
-<div class="card screen-card screen-earnings" id="forecastCard">
+<div class="card screen-card screen-contract" id="forecastCard">
  <div class="section-title">FORECAST</div>
  <div class="forecast">
   <div class="bigbox"><div class="small">Earned by selected date</div><b id="forecastEarn">$0.00</b></div>
@@ -630,6 +668,7 @@ input:focus{
  <div class="grid">
   <div><label>Monthly salary, USD</label><input id="salary" type="number" min="0" step=".01" value="5100"></div>
   <div><label>Basic Wage, USD / month</label><input id="woaBasicWage" type="number" min="0" step=".01" placeholder="0"></div>
+  <div><label>Travel expenses, USD</label><input id="travelExpenses" type="number" min="0" step=".01" placeholder="0"></div>
   <div><label>Travel to vessel</label><input id="travelStart" type="date"></div>
   <div><label>Pay start</label><input id="start" type="date"></div>
   <div><label>Contract end</label><input id="end" type="date"></div>
@@ -644,7 +683,7 @@ input:focus{
 </div>
 
 <div class="screen-info screen-more"><footer>
-Salary is calculated over 30 paid days per month. Travel to vessel is paid at the Basic Wage rate and ends on Pay Start. In 31-day months, the 31st day is not paid, except when it falls in the first partial earning month.<br>
+Salary is calculated over 30 paid days per month. Travel to vessel is paid at the Basic Wage rate and ends on Pay Start. Travel expenses are reimbursed once in the first earning month and added to earnings. In 31-day months, the 31st day is not paid, except when it falls in the first partial earning month.<br>
 USD/RUB, EUR/RUB and CNY/RUB rates are loaded from the official Central Bank of Russia. Rates refresh every 6 hours. Data is stored in the browser.
 </footer></div>
 
@@ -669,6 +708,16 @@ function getDate(id){
 function fmtUSD(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function getTravelStart(){
   return getDate("travelStart");
+}
+function getTravelExpenses(){
+  return Math.max(0,parseFloat($("travelExpenses")?.value)||0);
+}
+function firstEarningMonthExpense(asOf,payStart){
+  const expense=getTravelExpenses();
+  if(!expense||!asOf||!payStart)return 0;
+  const firstMonth=asOf.getFullYear()===payStart.getFullYear() &&
+                   asOf.getMonth()===payStart.getMonth();
+  return firstMonth?expense:0;
 }
 function getOnboardStart(){
   return getDate("start");
@@ -792,7 +841,7 @@ function save(){
   salary:$("salary").value,start:$("start").value,end:$("end").value,signoff:$("signoff").value,forecast:$("forecast").value,
   sleepStart:$("sleepStart").value,sleepEnd:$("sleepEnd").value,
   travelStart:$("travelStart").value,
-  woaBasicWage:$("woaBasicWage").value
+  woaBasicWage:$("woaBasicWage").value,travelExpenses:$("travelExpenses").value
  }));
 }
 function load(){
@@ -800,7 +849,7 @@ function load(){
  if(!x){initDates();return}
  try{
   x=JSON.parse(x);
-  ["salary","woaBasicWage","travelStart","start","end","signoff","forecast","sleepStart","sleepEnd"].forEach(k=>{
+  ["salary","woaBasicWage","travelExpenses","travelStart","start","end","signoff","forecast","sleepStart","sleepEnd"].forEach(k=>{
    if(x[k]!=null){
      $(k).value=(["travelStart","start","end","forecast"].includes(k) && String(x[k]).includes("T"))
        ? String(x[k]).slice(0,10)
@@ -984,7 +1033,8 @@ function archiveCompletedContract(start,end,signoff,salary){
  const travel=travelStart && travelStart<start
    ? travelEarnedBetween(travelStart,start,basicWage,start)
    : 0;
- const contract=contractOnboard+travel;
+ const travelExpense=getTravelExpenses();
+ const contract=contractOnboard+travel+travelExpense;
  const overtime=paidAmountBetween(end,signoff,salary,start);
  const woa=getWoaEarnedForPeriod(start,signoff);
  history.push({
@@ -994,6 +1044,7 @@ function archiveCompletedContract(start,end,signoff,salary){
   signoff:signoff.toLocaleDateString("en-US"),
   salary,
   travel,
+  travelExpense,
   contract,
   overtime,
   woa,
@@ -1443,32 +1494,23 @@ function earningsAtDate(asOf,start,end,signoff,now,salary){
  const limit=(signoff && signoff<now)?signoff:now;
  const d=asOf>limit?limit:asOf;
  const basicWage=parseFloat($("woaBasicWage")?.value)||0;
- if(!d || salary<=0) return {travel:0,basic:0,overtime:0,woa:0,total:0};
+ if(!d || salary<=0) return {travel:0,basic:0,overtime:0,woa:0,expense:0,total:0};
 
  const travel=travelEarnedUntil(d,basicWage,start);
-
  const basicEnd=end ? new Date(Math.min(d.getTime(),end.getTime())) : d;
- const basic= start && basicEnd>start
-   ? paidAmountBetween(start,basicEnd,salary,start)
-   : 0;
-
- const overtime=(end && d>end)
-   ? paidAmountBetween(end,d,salary,start)
-   : 0;
-
+ const basic=start && basicEnd>start ? paidAmountBetween(start,basicEnd,salary,start) : 0;
+ const overtime=(end && d>end) ? paidAmountBetween(end,d,salary,start) : 0;
  const woa=Math.max(0,getWoaEarned(d));
- return {
-   travel,
-   basic,
-   overtime,
-   woa,
-   total:travel+basic+overtime+woa
- };
+
+ const expense=firstEarningMonthExpense(d,start);
+ return {travel,basic,overtime,woa,expense,total:Math.max(0,travel+basic+overtime+woa-expense)};
 }
 
-function renderEarningsBreakdown(basic,overtime,woa,travel=0){
- const total=Math.max(0,(Number(basic)||0)+(Number(travel)||0)+(Number(overtime)||0)+(Number(woa)||0));
+function renderEarningsBreakdown(basic,overtime,woa,travel=0,expense=0){
+ const gross=Math.max(0,(Number(basic)||0)+(Number(travel)||0)+(Number(overtime)||0)+(Number(woa)||0));
+ const total=Math.max(0,gross+(Number(expense)||0));
  if($("breakdownTravel"))$("breakdownTravel").textContent=fmtUSD(travel);
+ if($("breakdownTravelExpense"))$("breakdownTravelExpense").textContent=expense>0?"-"+fmtUSD(expense).slice(1):"$0.00";
  $("breakdownBasic").textContent=fmtUSD(basic);
  $("breakdownOvertime").textContent=fmtUSD(overtime);
  $("breakdownWoa").textContent=fmtUSD(woa);
@@ -1507,6 +1549,158 @@ function updateEarningsGoal(currentEarned, salary, now){
  dateEl.textContent=eta.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
 }
 
+
+function monthStartDate(d){
+  return new Date(d.getFullYear(),d.getMonth(),1);
+}
+function monthEndExclusive(d){
+  return new Date(d.getFullYear(),d.getMonth()+1,1);
+}
+function monthKey(d){
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+}
+function monthLabel(d){
+  return d.toLocaleDateString("en-US",{month:"short",year:"numeric"});
+}
+function maxDate(a,b){ return new Date(Math.max(a.getTime(),b.getTime())); }
+function minDate(a,b){ return new Date(Math.min(a.getTime(),b.getTime())); }
+
+function woaEarnedForMonth(monthStart,monthEnd,contractStart,reportEnd,monthlyWage){
+  if(monthlyWage<=0)return 0;
+  const entries=getWoaEntries();
+  if(!entries.length)return 0;
+  const daily=monthlyWage/30;
+  let total=0;
+
+  entries.forEach(entry=>{
+    const s=woaDate(entry.start);
+    if(!s || s>reportEnd)return;
+    const entryEnd=woaDate(entry.end);
+    let e=entryEnd && entryEnd<reportEnd ? entryEnd : reportEnd;
+    if(e<monthStart || s>=monthEnd)return;
+
+    // WOA minimum is allocated to the month in which the WOA starts.
+    const overlapStart=maxDate(s,monthStart);
+    const overlapEnd=new Date(Math.min(e.getTime(),new Date(monthEnd.getTime()-1).getTime()));
+    if(overlapEnd<overlapStart)return;
+
+    const actualWhole=calendarDaysInclusive(s,e);
+    const paidWhole=countPaidCalendarDays(s,e,contractStart);
+    const minCredit = Math.max(paidWhole,WOA_MIN_DAYS);
+
+    if(monthKey(s)===monthKey(monthStart)){
+      const monthPaid=countPaidCalendarDays(overlapStart,overlapEnd,contractStart);
+      // The 5-day minimum is credited in the WOA start month.
+      const monthCredit=Math.max(monthPaid,WOA_MIN_DAYS);
+      total += monthCredit*daily;
+    }else{
+      const monthPaid=countPaidCalendarDays(overlapStart,overlapEnd,contractStart);
+      total += monthPaid*daily;
+    }
+  });
+  return total;
+}
+
+function getContractReportEnd(now,end,signoff){
+  if(signoff && signoff<=now)return signoff;
+  return now;
+}
+
+function buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense){
+  if(!start || !salary)return [];
+  const reportEnd=getContractReportEnd(now,end,signoff);
+  const reportStart=(travelStart && travelStart<start)?travelStart:start;
+  if(reportEnd<reportStart)return [];
+
+  const first=monthStartDate(reportStart);
+  const last=monthStartDate(reportEnd);
+  const months=[];
+  for(let cursor=new Date(first); cursor<=last; cursor.setMonth(cursor.getMonth()+1)){
+    const ms=new Date(cursor);
+    const me=monthEndExclusive(ms);
+
+    const travelFrom=travelStart ? maxDate(ms,travelStart) : null;
+    const travelTo=start ? minDate(me,start) : null;
+    const travel=(travelFrom && travelTo && travelTo>travelFrom)
+      ? paidAmountBetween(travelFrom,travelTo,basicWage,travelStart || ms)
+      : 0;
+
+    const basicFrom=maxDate(ms,start);
+    const basicTo=end ? minDate(me,end) : minDate(me,reportEnd);
+    const basic=(basicTo>basicFrom)?paidAmountBetween(basicFrom,basicTo,salary,start):0;
+
+    const otFrom=end ? maxDate(ms,end) : null;
+    const otTo=end ? minDate(me,reportEnd) : null;
+    const overtime=(otFrom && otTo && otTo>otFrom)?paidAmountBetween(otFrom,otTo,salary,start):0;
+
+    const woa=woaEarnedForMonth(ms,me,start,reportEnd,basicWage);
+    const expense=(ms.getFullYear()===start.getFullYear() && ms.getMonth()===start.getMonth())
+      ? travelExpense
+      : 0;
+
+    months.push({
+      key:monthKey(ms), label:monthLabel(ms),
+      travel,basic,overtime,woa,expense,
+      total:travel+basic+overtime+woa+expense
+    });
+  }
+  return months;
+}
+
+let contractMonthSelectedKey=null;
+function renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense){
+  const tabs=$("contractMonthTabs");
+  const list=$("contractMonthList");
+  if(!tabs || !list)return;
+
+  const months=buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense);
+  tabs.innerHTML="";
+  list.innerHTML="";
+
+  if(!months.length){
+    $("contractMonthLabel").textContent="No contract data";
+    $("contractMonthTotal").textContent="$0.00";
+    $("monthTravel").textContent="$0.00";
+    $("monthBasic").textContent="$0.00";
+    $("monthOvertime").textContent="$0.00";
+    $("monthWoa").textContent="$0.00";
+    $("monthExpense").textContent="$0.00";
+    $("monthTotalRow").textContent="$0.00";
+    return;
+  }
+
+  if(!contractMonthSelectedKey || !months.some(m=>m.key===contractMonthSelectedKey)){
+    contractMonthSelectedKey=months[months.length-1].key;
+  }
+
+  months.forEach(month=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.className="contract-month-tab"+(month.key===contractMonthSelectedKey?" active":"");
+    b.textContent=month.label;
+    b.addEventListener("click",()=>{
+      contractMonthSelectedKey=month.key;
+      renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense);
+    });
+    tabs.appendChild(b);
+
+    const row=document.createElement("div");
+    row.className="contract-month-summary";
+    row.innerHTML=`<span>${month.label}</span><span>${fmtUSD(month.total)}</span>`;
+    list.appendChild(row);
+  });
+
+  const selected=months.find(m=>m.key===contractMonthSelectedKey) || months[months.length-1];
+  $("contractMonthLabel").textContent=selected.label;
+  $("contractMonthTotal").textContent=fmtUSD(selected.total);
+  $("monthTravel").textContent=fmtUSD(selected.travel);
+  $("monthBasic").textContent=fmtUSD(selected.basic);
+  $("monthOvertime").textContent=fmtUSD(selected.overtime);
+  $("monthWoa").textContent=fmtUSD(selected.woa);
+  $("monthExpense").textContent=fmtUSD(selected.expense);
+  $("monthTotalRow").textContent=fmtUSD(selected.total);
+}
+
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), travelStart=getDate("travelStart"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  const basicWageNow=parseFloat($("woaBasicWage")?.value)||0;
@@ -1519,7 +1713,8 @@ function update(){
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary,start);
  archiveCompletedContract(start,end,signoff,salary);
- renderEarningsBreakdown(earnings.basic,earnings.overtime,earnings.woa,earnings.travel);
+ renderEarningsBreakdown(earnings.basic,earnings.overtime,earnings.woa,earnings.travel,earnings.expense);
+ renderContractMonths(now,start,end,signoff,travelStart,salary,basicWageNow,getTravelExpenses());
 
  // The large headline and the breakdown use exactly the same components.
  const earned=earnings.total;
@@ -1552,7 +1747,8 @@ function update(){
     const bw=parseFloat($("woaBasicWage")?.value)||0;
     const travelPart=travelStart&&start&&travelStart<start ? travelEarnedBetween(travelStart,start,bw,start) : 0;
     const onboardPart=end?totalPaidContract(start,end,salary):0;
-    $("contractTotal").textContent=fmtUSD(travelPart+onboardPart);
+    const travelExpense=getTravelExpenses();
+    $("contractTotal").textContent=fmtUSD(Math.max(0,travelPart+onboardPart+travelExpense));
   }
  }
  let is31=now.getDate()===31;
@@ -1606,13 +1802,17 @@ if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
     if(we && todayStart>we)return;
     woaToday += woaDailyToday;
   });
-} let today=basicToday+overtimeToday+woaToday;
- $("todayEarnBig").textContent=fmtUSD(today);
+} const todayExpense = (start && now>=start && now<new Date(start.getFullYear(),start.getMonth()+1,1))
+   ? getTravelExpenses()
+   : 0;
+ let today=basicToday+overtimeToday+woaToday+todayExpense;
+ $("todayEarnBig").textContent=fmtUSD(Math.max(0,today));
 
  if($("todayTravel"))$("todayTravel").textContent=fmtUSD(travelToday);
  if($("todayBasic"))$("todayBasic").textContent=fmtUSD(onboardBasicToday);
  if($("todayOvertime"))$("todayOvertime").textContent=fmtUSD(overtimeToday);
  if($("todayWoa"))$("todayWoa").textContent=fmtUSD(woaToday);
+ if($("todayTravelExpense"))$("todayTravelExpense").textContent=todayExpense>0?"-"+fmtUSD(todayExpense).slice(1):"$0.00";
 
  let dayProgress=is31?0:Math.min(100,(paidSecondsToday/86400)*100);
  $("todayProgressBar").style.width=dayProgress+"%";
@@ -1632,6 +1832,8 @@ if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
     forecastOnboard=paidAmountBetween(start,f,salary,start);
   }
   let fe=forecastTravel+forecastOnboard;
+  const forecastExpense = f>=start ? getTravelExpenses() : 0;
+  fe=Math.max(0,fe+forecastExpense);
   $("forecastEarn").textContent=fmtUSD(fe);
   $("forecastLeft").textContent=fmtUSD(Math.max(0,fe-earned));
  }
@@ -1660,8 +1862,8 @@ function updateSleep(perSec,payStart){
  }
  $("sleepEarn").textContent=fmtUSD(travelEarn+onboardEarn);
 }
-["salary","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
-$("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";initDates();$("salary").value=5100;update()};
+["salary","woaBasicWage","travelExpenses","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
+$("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";$("travelExpenses").value="";initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
 if ("serviceWorker" in navigator) {
@@ -1696,15 +1898,15 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.10.0 • Build 2026-08-27</div>
+<div class="app-version">Salary Tracker • v0.12.0 • Build 2026-08-30</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
   <button class="nav-btn active" type="button" data-screen="home" aria-label="Home">
    <span class="nav-icon">⌂</span><span class="nav-label">HOME</span>
   </button>
-  <button class="nav-btn" type="button" data-screen="earnings" aria-label="Earnings">
-   <span class="nav-icon">$</span><span class="nav-label">EARNINGS</span>
+  <button class="nav-btn" type="button" data-screen="contract" aria-label="Contract">
+   <span class="nav-icon">▣</span><span class="nav-label">CONTRACT</span>
   </button>
   <button class="nav-btn" type="button" data-screen="woa" aria-label="WOA">
    <span class="nav-icon">⚔</span><span class="nav-label">WOA</span>
