@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.12.0</title>
+<title>Salary Tracker v0.12.2</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -523,7 +523,7 @@ input:focus{
  <div class="contract-month-tabs" id="contractMonthTabs"></div>
  <div class="contract-month-label" id="contractMonthLabel">—</div>
  <div class="contract-month-total" id="contractMonthTotal">$0.00</div>
- <div class="contract-month-subtitle">Earned in selected month</div>
+ <div class="contract-month-subtitle">Earned in selected month • up to current date</div>
  <div class="row"><span>Travel to vessel</span><span id="monthTravel">$0.00</span></div>
  <div class="row"><span>Basic Salary</span><span id="monthBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="monthOvertime">$0.00</span></div>
@@ -1607,44 +1607,62 @@ function getContractReportEnd(now,end,signoff){
 }
 
 function buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense){
-  if(!start || !salary)return [];
-  const reportEnd=getContractReportEnd(now,end,signoff);
-  const reportStart=(travelStart && travelStart<start)?travelStart:start;
-  if(reportEnd<reportStart)return [];
+ if(!start || !salary)return [];
 
-  const first=monthStartDate(reportStart);
-  const last=monthStartDate(reportEnd);
-  const months=[];
-  for(let cursor=new Date(first); cursor<=last; cursor.setMonth(cursor.getMonth()+1)){
-    const ms=new Date(cursor);
-    const me=monthEndExclusive(ms);
+ const reportEnd=getContractReportEnd(now,end,signoff);
+ const reportStart=(travelStart && travelStart<start)?travelStart:start;
+ if(reportEnd<reportStart)return [];
 
-    const travelFrom=travelStart ? maxDate(ms,travelStart) : null;
-    const travelTo=start ? minDate(me,start) : null;
-    const travel=(travelFrom && travelTo && travelTo>travelFrom)
-      ? paidAmountBetween(travelFrom,travelTo,basicWage,travelStart || ms)
-      : 0;
+ const first=monthStartDate(reportStart);
+ const last=monthStartDate(reportEnd);
+ const months=[];
 
-    const basicFrom=maxDate(ms,start);
-    const basicTo=end ? minDate(me,end) : minDate(me,reportEnd);
-    const basic=(basicTo>basicFrom)?paidAmountBetween(basicFrom,basicTo,salary,start):0;
+ for(let cursor=new Date(first); cursor<=last; cursor.setMonth(cursor.getMonth()+1)){
+   const ms=new Date(cursor);
+   const me=monthEndExclusive(ms);
 
-    const otFrom=end ? maxDate(ms,end) : null;
-    const otTo=end ? minDate(me,reportEnd) : null;
-    const overtime=(otFrom && otTo && otTo>otFrom)?paidAmountBetween(otFrom,otTo,salary,start):0;
+   // Travel is a one-time pre-boarding period. It is shown only in the
+   // calendar month containing the Travel to vessel date.
+   const isTravelMonth=travelStart &&
+     ms.getFullYear()===travelStart.getFullYear() &&
+     ms.getMonth()===travelStart.getMonth();
 
-    const woa=woaEarnedForMonth(ms,me,start,reportEnd,basicWage);
-    const expense=(ms.getFullYear()===start.getFullYear() && ms.getMonth()===start.getMonth())
-      ? travelExpense
-      : 0;
+   const travelFrom=isTravelMonth ? travelStart : null;
+   const travelTo=isTravelMonth ? minDate(me,start) : null;
+   const travelEnd=(travelTo && travelTo<=reportEnd)?travelTo:(
+     travelTo ? reportEnd : null
+   );
+   const travel=(travelFrom && travelEnd && travelEnd>travelFrom)
+     ? paidAmountBetween(travelFrom,travelEnd,basicWage,travelStart)
+     : 0;
 
-    months.push({
-      key:monthKey(ms), label:monthLabel(ms),
-      travel,basic,overtime,woa,expense,
-      total:travel+basic+overtime+woa+expense
-    });
-  }
-  return months;
+   const basicFrom=maxDate(ms,start);
+   const basicMonthEnd=end ? minDate(me,end) : me;
+   const basicTo=minDate(basicMonthEnd,reportEnd);
+   const basic=(basicTo>basicFrom)
+     ? paidAmountBetween(basicFrom,basicTo,salary,start)
+     : 0;
+
+   const otFrom=end ? maxDate(ms,end) : null;
+   const otMonthEnd=end ? minDate(me,reportEnd) : null;
+   const overtime=(otFrom && otMonthEnd && otMonthEnd>otFrom)
+     ? paidAmountBetween(otFrom,otMonthEnd,salary,start)
+     : 0;
+
+   const woa=woaEarnedForMonth(ms,me,start,reportEnd,basicWage);
+
+   // Travel expenses are reimbursed once, in the first contract month.
+   const isFirstMonth=ms.getFullYear()===start.getFullYear() &&
+                      ms.getMonth()===start.getMonth();
+   const expense=(isFirstMonth && reportEnd>=start)?travelExpense:0;
+
+   const total=travel+basic+overtime+woa+expense;
+   months.push({
+     key:monthKey(ms), label:monthLabel(ms),
+     travel,basic,overtime,woa,expense,total
+   });
+ }
+ return months;
 }
 
 let contractMonthSelectedKey=null;
@@ -1898,7 +1916,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.12.0 • Build 2026-08-30</div>
+<div class="app-version">Salary Tracker • v0.12.2 • Build 2026-08-30</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
