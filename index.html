@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.1</title>
+<title>Salary Tracker v0.13.2</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -1532,7 +1532,7 @@ function earningsAtDate(asOf,start,end,signoff,now,salary){
  const overtime=(end && d>end) ? paidAmountBetween(end,d,salary,start) : 0;
  const woa=Math.max(0,getWoaEarned(d));
 
- const expense=firstEarningMonthExpense(d,start);
+ const expense=(start && d>=start) ? getTravelExpenses() : 0;
  return {travel,basic,overtime,woa,expense,total:Math.max(0,travel+basic+overtime+woa+expense)};
 }
 
@@ -1936,7 +1936,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.1 • Build 2026-08-31</div>
+<div class="app-version">Salary Tracker • v0.13.2 • Build 2026-09-01</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
