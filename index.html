@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.0</title>
+<title>Salary Tracker v0.13.1</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -1790,16 +1790,18 @@ function update(){
     $("contractTotal").textContent=fmtUSD(Math.max(0,travelPart+onboardPart+travelExpense));
   }
  }
- let is31=now.getDate()===31;
- $("day31").textContent=is31?"⏸ The 31st day is not paid":"✓ Paid";
- $("day31").className=is31?"paused":"";
+ const is31=now.getDate()===31;
+ const paid31=is31 ? isPaidCalendarDay(now,start) : true;
+ $("day31").textContent=is31 ? (paid31 ? "✓ The 31st day is paid" : "⏸ The 31st day is not paid") : "✓ Paid";
+ $("day31").className=(is31 && !paid31)?"paused":"";
  const monthDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
- $("monthRule").textContent =
-   monthDays===28 ? "28 paid days" :
-   monthDays===29 ? "29 paid days" :
-   monthDays===31 ? "30 paid days (31st day not paid)" :
-   "30 paid days";
-
+ const currentMonthIsFirstPartial=!!(start &&
+   start.getFullYear()===now.getFullYear() &&
+   start.getMonth()===now.getMonth() &&
+   start.getDate()!==1);
+ $("monthRule").textContent = monthDays===31
+   ? (currentMonthIsFirstPartial ? "31 paid days (first partial month)" : "30 paid days (31st day not paid)")
+   : monthDays===28 ? "28 paid days" : monthDays===29 ? "29 paid days" : "30 paid days";
  // Today earnings are broken down using the same components as Total Earned.
  let dayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
  let paidSecondsToday=paidBetween(dayStart,now,start);
@@ -1850,12 +1852,12 @@ if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
  if($("todayWoa"))$("todayWoa").textContent=fmtUSD(woaToday);
 
 
- let dayProgress=is31?0:Math.min(100,(paidSecondsToday/86400)*100);
+ let dayProgress=(is31 && !paid31)?0:Math.min(100,(paidSecondsToday/86400)*100);
  $("todayProgressBar").style.width=dayProgress+"%";
  $("todayProgress").textContent=dayProgress.toFixed(1)+"%";
  $("todayPaidTime").innerHTML=fmtDurationHTML(paidSecondsToday);
  let next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
- $("todayLeft").innerHTML=is31?"31st day is not paid":fmtDurationHTML((next-now)/1000,true);
+ $("todayLeft").innerHTML=(is31 && !paid31)?"31st day is not paid":fmtDurationHTML((next-now)/1000,true);
 
  let f=getDate("forecast");
  if(f&&start){
@@ -1934,7 +1936,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.0 • Build 2026-08-30</div>
+<div class="app-version">Salary Tracker • v0.13.1 • Build 2026-08-31</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
