@@ -590,6 +590,30 @@ body {
   }
 }
 
+
+/* === FINAL VISUAL MICRO-ADJUSTMENT === */
+@media (max-width:799px){
+  .wrap{
+    padding-top:calc(32px + env(safe-area-inset-top)) !important;
+  }
+
+  .bottom-nav{
+    height:calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .bottom-nav-inner{
+    height:100px !important;
+    padding:24px 12px 4px !important;
+    box-sizing:border-box !important;
+    transform:none !important;
+  }
+
+  .nav-btn{
+    height:70px !important;
+    min-height:70px !important;
+  }
+}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
