@@ -566,6 +566,30 @@ body {
   }
 }
 
+
+/* === FINAL iOS SAFE-AREA / HEADER ALIGNMENT === */
+.wrap{
+  padding-top:calc(48px + env(safe-area-inset-top)) !important;
+}
+
+/* The nav remains fixed, but the button row sits slightly lower inside it. */
+@media (max-width:799px){
+  .bottom-nav{
+    height:calc(96px + env(safe-area-inset-bottom)) !important;
+    padding:0 0 env(safe-area-inset-bottom) !important;
+  }
+  .bottom-nav-inner{
+    height:96px !important;
+    padding:18px 12px 4px !important;
+    box-sizing:border-box !important;
+    transform:none !important;
+  }
+  .nav-btn{
+    height:70px !important;
+    min-height:70px !important;
+  }
+}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
