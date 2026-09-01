@@ -476,6 +476,44 @@ input:focus{
 .history-month-line.total{color:var(--text);font-weight:700}
 @media(max-width:520px){.history-actions,.history-detail-grid{grid-template-columns:1fr}}
 
+
+/* ---------- FINAL bottom navigation positioning ---------- */
+.bottom-nav{
+  position:fixed !important;
+  top:auto !important;
+  right:0 !important;
+  bottom:0 !important;
+  left:0 !important;
+  width:100% !important;
+  max-width:none !important;
+  height:calc(72px + env(safe-area-inset-bottom)) !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:6px 12px env(safe-area-inset-bottom) !important;
+  box-sizing:border-box !important;
+  transform:none !important;
+  display:flex !important;
+  align-items:flex-start !important;
+  justify-content:center !important;
+  z-index:9999 !important;
+}
+.bottom-nav-inner{
+  width:100% !important;
+  max-width:760px !important;
+  height:66px !important;
+  margin:0 auto !important;
+  padding:0 !important;
+  transform:none !important;
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:6px !important;
+}
+.nav-btn{
+  min-height:60px !important;
+  height:60px !important;
+  margin:0 !important;
+}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
