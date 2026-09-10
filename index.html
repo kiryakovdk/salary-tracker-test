@@ -873,6 +873,34 @@ function getTravelStart(){
 function getTravelExpenses(){
   return Math.max(0,parseFloat($("travelExpenses")?.value)||0);
 }
+
+const MONTHLY_EXPENSES_KEY="salaryTrackerMonthlyExpenses";
+function getMonthlyExpenses(){
+ try{
+  const x=JSON.parse(localStorage.getItem(MONTHLY_EXPENSES_KEY)||"{}");
+  return x&&typeof x==="object"&&!Array.isArray(x)?x:{};
+ }catch(e){return {}}
+}
+function saveMonthlyExpenses(x){
+ localStorage.setItem(MONTHLY_EXPENSES_KEY,JSON.stringify(x));
+}
+function getMonthExpense(key,type){
+ const m=getMonthlyExpenses()[key];
+ return m?Math.max(0,parseFloat(m[type])||0):0;
+}
+function getMonthExpenseData(key){
+ return {
+  slopChest:getMonthExpense(key,"slopChest"),
+  internet:getMonthExpense(key,"internet")
+ };
+}
+function setMonthExpense(key,type,value){
+ if(!key||!["slopChest","internet"].includes(type))return;
+ const all=getMonthlyExpenses();
+ if(!all[key])all[key]={};
+ all[key][type]=Math.max(0,parseFloat(value)||0);
+ saveMonthlyExpenses(all);
+}
 function firstEarningMonthExpense(asOf,payStart){
   const expense=getTravelExpenses();
   if(!expense||!asOf||!payStart)return 0;
