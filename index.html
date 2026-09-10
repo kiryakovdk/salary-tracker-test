@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.3</title>
+<title>Salary Tracker v0.13.4</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -478,7 +478,7 @@ input:focus{
 
 
 
-/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.3 === */
+/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.4 === */
 html, body {
   min-height: 100%;
   margin: 0;
@@ -696,8 +696,8 @@ body {
 <div class="monthly-expenses-box">
  <div class="small">MONTHLY EXPENSES</div>
  <div class="expense-input-grid">
-  <label>Slop Chest<input id="monthSlopChest" type="number" min="0" step="0.01" value="0"></label>
-  <label>Internet<input id="monthInternet" type="number" min="0" step="0.01" value="0"></label>
+  <label>Slop Chest<input id="monthSlopChest" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="0"></label>
+  <label>Internet<input id="monthInternet" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="0"></label>
  </div>
  <div class="row"><span>Total expenses</span><span id="monthMonthlyExpenses">$0.00</span></div>
 </div>
@@ -1870,7 +1870,9 @@ function renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage
  $("monthTravel").textContent=fmtUSD(m.travel);$("monthBasic").textContent=fmtUSD(m.basic);
  $("monthOvertime").textContent=fmtUSD(m.overtime);$("monthWoa").textContent=fmtUSD(m.woa);
  $("monthExpense").textContent=fmtUSD(m.expense);
- $("monthSlopChest").value=m.slopChest.toFixed(2);$("monthInternet").value=m.internet.toFixed(2);
+ const slopEl=$("monthSlopChest"), internetEl=$("monthInternet");
+ if(document.activeElement!==slopEl)slopEl.value=String(Math.round(Number(m.slopChest)||0));
+ if(document.activeElement!==internetEl)internetEl.value=String(Math.round(Number(m.internet)||0));
  $("monthMonthlyExpenses").textContent=fmtUSD(m.monthlyExpenses);
  $("monthTotalRow").textContent=fmtUSD(m.total);$("monthNetTotal").textContent=fmtUSD(m.netTotal);
  const gross=months.reduce((s,x)=>s+(Number(x.total)||0),0);
@@ -2040,7 +2042,11 @@ function updateSleep(perSec,payStart){
  }
  $("sleepEarn").textContent=fmtUSD(travelEarn+onboardEarn);
 }
-["salary","woaBasicWage","travelExpenses","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));["monthSlopChest","monthInternet"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",()=>{setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":"internet",el.value);update();});});
+["salary","woaBasicWage","travelExpenses","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
+["monthSlopChest","monthInternet"].forEach(id=>{const el=$(id);if(!el)return;
+ el.addEventListener("input",()=>{el.value=el.value.replace(/\D/g,"");setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":"internet",el.value||0);});
+ el.addEventListener("blur",()=>{el.value=String(Math.round(Number(el.value)||0));setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":"internet",el.value);update();});
+});
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(MONTHLY_EXPENSES_KEY);localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";$("travelExpenses").value="";initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
@@ -2076,7 +2082,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.3 • Build 2026-09-11</div>
+<div class="app-version">Salary Tracker • v0.13.4 • Build 2026-09-11</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
