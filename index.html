@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.2</title>
+<title>Salary Tracker v0.13.3</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -478,7 +478,7 @@ input:focus{
 
 
 
-/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.2 === */
+/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.3 === */
 html, body {
   min-height: 100%;
   margin: 0;
@@ -2040,7 +2040,7 @@ function updateSleep(perSec,payStart){
  }
  $("sleepEarn").textContent=fmtUSD(travelEarn+onboardEarn);
 }
-["salary","woaBasicWage","travelExpenses","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));["monthSlopChest","monthInternet"].forEach(id=>{const el=$(id);if(el)el.addEventListener("change",()=>{setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":"internet",el.value);update();});});
+["salary","woaBasicWage","travelExpenses","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));["monthSlopChest","monthInternet"].forEach(id=>{const el=$(id);if(el)el.addEventListener("input",()=>{setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":"internet",el.value);update();});});
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(MONTHLY_EXPENSES_KEY);localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";$("travelExpenses").value="";initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
@@ -2076,7 +2076,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.2 • Build 2026-09-01</div>
+<div class="app-version">Salary Tracker • v0.13.3 • Build 2026-09-11</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
