@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.4</title>
+<title>Salary Tracker v0.13.5</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -478,7 +478,7 @@ input:focus{
 
 
 
-/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.4 === */
+/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.5 === */
 html, body {
   min-height: 100%;
   margin: 0;
@@ -687,7 +687,7 @@ body {
  <div class="contract-month-tabs" id="contractMonthTabs"></div>
  <div class="contract-month-label" id="contractMonthLabel">—</div>
  <div class="contract-month-total" id="contractMonthTotal">$0.00</div>
- <div class="contract-month-subtitle">Earned in selected month • up to current date</div>
+ <div class="contract-month-subtitle">Net earned in selected month • up to current date</div>
  <div class="row"><span>Travel to vessel</span><span id="monthTravel">$0.00</span></div>
  <div class="row"><span>Basic Salary</span><span id="monthBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="monthOvertime">$0.00</span></div>
@@ -1863,10 +1863,10 @@ function renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage
   btn.addEventListener("click",()=>{contractMonthSelectedKey=month.key;renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense)});
   tabs.appendChild(btn);
   const row=document.createElement("div");row.className="contract-month-summary";
-  row.innerHTML=`<span>${month.label}</span><span>${fmtUSD(month.total)}</span>`;list.appendChild(row);
+  row.innerHTML=`<span>${month.label}</span><span>${fmtUSD(month.netTotal)}</span>`;list.appendChild(row);
  });
  const m=months.find(x=>x.key===contractMonthSelectedKey)||months[months.length-1];
- $("contractMonthLabel").textContent=m.label;$("contractMonthTotal").textContent=fmtUSD(m.total);
+ $("contractMonthLabel").textContent=m.label;$("contractMonthTotal").textContent=fmtUSD(m.netTotal);
  $("monthTravel").textContent=fmtUSD(m.travel);$("monthBasic").textContent=fmtUSD(m.basic);
  $("monthOvertime").textContent=fmtUSD(m.overtime);$("monthWoa").textContent=fmtUSD(m.woa);
  $("monthExpense").textContent=fmtUSD(m.expense);
@@ -1880,6 +1880,11 @@ function renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage
  $("contractGrossTotal").textContent=fmtUSD(gross);
  $("contractExpensesTotal").textContent=fmtUSD(expenses);
  $("contractNetTotal").textContent=fmtUSD(Math.max(0,gross-expenses));
+}
+
+function monthlyExpensesEarnedUntil(now,start,end,signoff,travelStart,salary,basicWage,travelExpense){
+ const months=buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense);
+ return months.reduce((sum,m)=>sum+(Number(m.monthlyExpenses)||0),0);
 }
 
 function update(){
@@ -1898,7 +1903,8 @@ function update(){
  renderContractMonths(now,start,end,signoff,travelStart,salary,basicWageNow,getTravelExpenses());
 
  // The large headline and the breakdown use exactly the same components.
- const earned=earnings.total;
+ const monthlyExpensesEarned=monthlyExpensesEarnedUntil(now,start,end,signoff,travelStart,salary,basicWageNow,getTravelExpenses());
+ const earned=Math.max(0,earnings.total-monthlyExpensesEarned);
  updateEarningsGoal(earned,salary,now);
  $("usd").textContent=fmtUSD(earned);
  $("paidDay").textContent=fmtUSD(currentPaidDay);
@@ -2082,7 +2088,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.4 • Build 2026-09-11</div>
+<div class="app-version">Salary Tracker • v0.13.5 • Build 2026-09-11</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
