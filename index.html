@@ -968,24 +968,17 @@ function paidAmountBetween(a,b,salary,payStart){
   if(!a||!b||b<=a||salary<=0)return 0;
   payStart = payStart || a;
   let total=0,c=new Date(a);
+  // Accrue by local calendar day, not raw elapsed seconds across a month.
+  // This prevents daylight-saving changes from adding or removing salary.
   while(c<b){
+    const dayStart=new Date(c.getFullYear(),c.getMonth(),c.getDate());
+    const nextDay=new Date(c.getFullYear(),c.getMonth(),c.getDate()+1);
+    const e=b<nextDay?b:nextDay;
     const year=c.getFullYear(), month=c.getMonth();
-    const next=new Date(year,month+1,1);
-    const e=b<next?b:next;
-
-    // Work day-by-day only around the 31st boundary, otherwise use the
-    // entire month segment for efficiency.
-    const segmentIsFirstPartial = sameMonth(c,payStart) && payStart.getDate()!==1;
-    if(segmentIsFirstPartial){
-      total += ((e-c)/1000) * salary / paidSecondsInMonth(year,month);
-    }else if(c.getDate()!==31){
-      const month31 = new Date(year,month,31,0,0,0,0);
-      if(month31>=e || month31<c){
-        total += ((e-c)/1000) * salary / paidSecondsInMonth(year,month);
-      }else{
-        total += Math.max(0,(month31-c)/1000) * salary / paidSecondsInMonth(year,month);
-        // The 31st itself is unpaid; nothing is added for [31st, monthEnd).
-      }
+    if(isPaidCalendarDay(c,payStart)){
+      const actualDaySeconds=(nextDay-dayStart)/1000;
+      const elapsedSeconds=(e-c)/1000;
+      total += (elapsedSeconds/actualDaySeconds) * salary / payableDaysInMonth(year,month);
     }
     c=e;
   }
@@ -998,20 +991,15 @@ function paidBetween(a,b,payStart){
   if(!a||!b||b<=a)return 0;
   payStart = payStart || a;
   let total=0,c=new Date(a);
+  // Return normalized 24-hour-equivalent paid seconds, so a 23/25-hour
+  // daylight-saving day still counts as one calendar day.
   while(c<b){
-    const year=c.getFullYear(), month=c.getMonth();
-    const next=new Date(year,month+1,1);
-    const e=b<next?b:next;
-    const segmentIsFirstPartial = sameMonth(c,payStart) && payStart.getDate()!==1;
-    if(segmentIsFirstPartial){
-      total += (e-c)/1000;
-    }else if(c.getDate()!==31){
-      const month31 = new Date(year,month,31,0,0,0,0);
-      if(month31>=e || month31<c){
-        total += (e-c)/1000;
-      }else{
-        total += Math.max(0,(month31-c)/1000);
-      }
+    const dayStart=new Date(c.getFullYear(),c.getMonth(),c.getDate());
+    const nextDay=new Date(c.getFullYear(),c.getMonth(),c.getDate()+1);
+    const e=b<nextDay?b:nextDay;
+    if(isPaidCalendarDay(c,payStart)){
+      const actualDaySeconds=(nextDay-dayStart)/1000;
+      total += ((e-c)/1000) / actualDaySeconds * 86400;
     }
     c=e;
   }
