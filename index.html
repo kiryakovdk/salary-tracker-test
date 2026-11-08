@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.6</title>
+<title>Salary Tracker v0.13.7</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -478,7 +478,7 @@ input:focus{
 
 
 
-/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.6 === */
+/* === UNIFIED APP SHELL / BOTTOM NAV v0.13.7 === */
 html, body {
   min-height: 100%;
   margin: 0;
@@ -624,6 +624,8 @@ body {
 <link rel="apple-touch-icon" href="icon-180.png">
 
 <style>
+.bonus-row{align-items:center}
+.bonus-row input{width:140px;max-width:48%;margin:0;padding:8px 10px;text-align:right;font-size:13px;border-radius:9px}
 .monthly-expenses-box,.contract-summary-box{margin-top:16px;padding:14px 0 2px;border-top:1px solid rgba(255,255,255,.10)}
 .expense-input-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 2px}
 .expense-input-grid label{display:block;font-size:.78rem;letter-spacing:.04em;color:var(--muted,#8d969f)}
@@ -691,8 +693,9 @@ body {
  <div class="row"><span>Travel to vessel</span><span id="monthTravel">$0.00</span></div>
  <div class="row"><span>Basic Salary</span><span id="monthBasic">$0.00</span></div>
  <div class="row"><span>Overtime</span><span id="monthOvertime">$0.00</span></div>
- <div class="row"><span>WOA</span><span id="monthWoa">$0.00</span></div>
- <div class="row"><span>Travel expenses reimbursed</span><span id="monthExpense">$0.00</span></div>
+  <div class="row"><span>WOA</span><span id="monthWoa">$0.00</span></div>
+  <div class="row bonus-row"><span>Bonus</span><input id="monthBonus" type="number" min="0" step="0.01" inputmode="decimal" value="0" aria-label="Bonus for selected month"></div>
+  <div class="row"><span>Travel expenses reimbursed</span><span id="monthExpense">$0.00</span></div>
 <div class="monthly-expenses-box">
  <div class="small">MONTHLY EXPENSES</div>
  <div class="expense-input-grid">
@@ -876,6 +879,32 @@ function getTravelExpenses(){
 }
 
 const MONTHLY_EXPENSES_KEY="salaryTrackerMonthlyExpenses";
+const MONTHLY_BONUSES_KEY="salaryTrackerMonthlyBonuses";
+function getMonthlyBonuses(){
+ try{
+  const x=JSON.parse(localStorage.getItem(MONTHLY_BONUSES_KEY)||"{}");
+  return x&&typeof x==="object"&&!Array.isArray(x)?x:{};
+ }catch(e){return {}}
+}
+function getMonthBonus(key){
+ const all=getMonthlyBonuses();
+ return all[key]?Math.max(0,parseFloat(all[key].amount)||0):0;
+}
+function setMonthBonus(key,value){
+ if(!key)return;
+ const all=getMonthlyBonuses();
+ all[key]={amount:Math.max(0,parseFloat(value)||0)};
+ localStorage.setItem(MONTHLY_BONUSES_KEY,JSON.stringify(all));
+ syncArchivedBonusForMonth(key,all[key].amount);
+}
+function monthlyBonusTotalBetween(from,to){
+ if(!from||!to||to<from)return 0;
+ let total=0;
+ for(let cursor=monthStartDate(from);cursor<=monthStartDate(to);cursor.setMonth(cursor.getMonth()+1)){
+  total+=getMonthBonus(monthKey(cursor));
+ }
+ return total;
+}
 function getMonthlyExpenses(){
  try{
   const x=JSON.parse(localStorage.getItem(MONTHLY_EXPENSES_KEY)||"{}");
@@ -1141,10 +1170,30 @@ function getHistory(){
 function saveHistory(history){
  localStorage.setItem("salaryTrackerHistory",JSON.stringify(history));
 }
+function syncArchivedBonusForMonth(key,newBonus){
+ const history=getHistory();
+ let changed=false;
+ history.forEach(contract=>{
+  if(!Array.isArray(contract.months))return;
+  const month=contract.months.find(item=>item.key===key);
+  if(!month)return;
+  const previous=Math.max(0,Number(month.bonus)||0);
+  const next=Math.max(0,Number(newBonus)||0);
+  const delta=next-previous;
+  if(Math.abs(delta)<0.000001)return;
+  month.bonus=next;
+  month.total=Math.max(0,(Number(month.total)||0)+delta);
+  month.netTotal=Math.max(0,(Number(month.total)||0)-(Number(month.monthlyExpenses)||0));
+  contract.bonus=Math.max(0,(Number(contract.bonus)||0)+delta);
+  contract.total=Math.max(0,(Number(contract.total)||0)+delta);
+  changed=true;
+ });
+ if(changed){saveHistory(history);renderHistory();}
+}
 
 function renderAllTime(){
  const history=getHistory();
- const total=history.reduce((s,x)=>s+(Number(x.total)||((Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0))),0);
+ const total=history.reduce((s,x)=>s+(Number(x.total)||((Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0)+(Number(x.bonus)||0))),0);
  $("allTimeTotal").textContent=fmtUSD(total);
  $("allTimeContracts").textContent=history.length;
 }
@@ -1184,6 +1233,7 @@ function renderHistory(){
        <div class="row"><span>Basic Salary</span><span>${fmtUSD(basic)}</span></div>
        <div class="row"><span>Overtime</span><span>${fmtUSD(overtime)}</span></div>
        <div class="row"><span>WOA</span><span>${fmtUSD(woa)}</span></div>
+       <div class="row"><span>Bonus</span><span>${fmtUSD(x.bonus||0)}</span></div>
        <div class="row"><span>Travel expenses</span><span>${fmtUSD(expense)}</span></div>
        <div class="row total-earned-row"><span>Contract total</span><span>${fmtUSD(x.total)}</span></div>
       </div>
@@ -1195,6 +1245,7 @@ function renderHistory(){
          <div class="history-month-line"><span>Basic Salary</span><span>${fmtUSD(month.basic||0)}</span></div>
          <div class="history-month-line"><span>Overtime</span><span>${fmtUSD(month.overtime||0)}</span></div>
          <div class="history-month-line"><span>WOA</span><span>${fmtUSD(month.woa||0)}</span></div>
+         <div class="history-month-line"><span>Bonus</span><span>${fmtUSD(month.bonus||0)}</span></div>
          <div class="history-month-line"><span>Travel expenses reimbursed</span><span>${fmtUSD(month.expense||0)}</span></div>
          <div class="history-month-line"><span>Slop Chest</span><span>-${fmtUSD(month.slopChest||0)}</span></div>
          <div class="history-month-line"><span>Internet</span><span>-${fmtUSD(month.internet||0)}</span></div>
@@ -1250,11 +1301,11 @@ function archiveCompletedContract(start,end,signoff,salary){
  const contract=contractOnboard+travel+travelExpense;
  const overtime=paidAmountBetween(end,signoff,salary,start);
  const woa=getWoaEarnedForPeriod(start,signoff);
- const total=contract+overtime+woa;
-
  const months=typeof buildContractMonths==="function"
    ? buildContractMonths(signoff,start,end,signoff,travelStart,salary,basicWage,travelExpense)
    : [];
+ const bonus=months.reduce((sum,m)=>sum+(Number(m.bonus)||0),0);
+ const total=contract+overtime+woa+bonus;
 
  history.push({
    key,
@@ -1268,6 +1319,7 @@ function archiveCompletedContract(start,end,signoff,salary){
    contract,
    overtime,
    woa,
+   bonus,
    overtimeTime:fmtDuration((signoff-end)/1000),
    months,
    monthlyExpenses:months.map(m=>({key:m.key,label:m.label,slopChest:m.slopChest||0,internet:m.internet||0,cashAdvance:m.cashAdvance||0,total:m.monthlyExpenses||0})),
@@ -1290,13 +1342,14 @@ function createTestContract(){
  const overtime=paidAmountBetween(end,signoff,salary,start);
  const months=typeof buildContractMonths==="function"
    ? buildContractMonths(signoff,start,end,signoff,null,salary,0,0):[];
+ const bonus=months.reduce((sum,m)=>sum+(Number(m.bonus)||0),0);
  history.push({
    key,test:true,start:start.toLocaleDateString("en-US"),
    end:end.toLocaleDateString("en-US"),
    signoff:signoff.toLocaleDateString("en-US"),
    salary,basic:contract,travel:0,travelExpense:0,contract,
-   overtime,woa:0,overtimeTime:fmtDuration((signoff-end)/1000),
-   months,total:contract+overtime
+   overtime,woa:0,bonus,overtimeTime:fmtDuration((signoff-end)/1000),
+   months,total:contract+overtime+bonus
  });
  saveHistory(history);
  renderHistory();
@@ -1713,9 +1766,11 @@ function earningsAtDate(asOf,start,end,signoff,now,salary){
  const basic=start && basicEnd>start ? paidAmountBetween(start,basicEnd,salary,start) : 0;
  const overtime=(end && d>end) ? paidAmountBetween(end,d,salary,start) : 0;
  const woa=Math.max(0,getWoaEarned(d));
+ const reportStart=(getTravelStart()&&start&&getTravelStart()<start)?getTravelStart():start;
+ const bonus=reportStart&&d>=reportStart?monthlyBonusTotalBetween(reportStart,d):0;
 
  const expense=(start && d>=start) ? getTravelExpenses() : 0;
- return {travel,basic,overtime,woa,expense,total:Math.max(0,travel+basic+overtime+woa+expense)};
+ return {travel,basic,overtime,woa,bonus,expense,total:Math.max(0,travel+basic+overtime+woa+bonus+expense)};
 }
 
 
@@ -1831,8 +1886,9 @@ function buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,
   const reimbursement=first&&reportEnd>=start?travelExpense:0;
   const ex=getMonthExpenseData(monthKey(ms));
   const monthlyExpenses=ex.slopChest+ex.internet+ex.cashAdvance;
-  const gross=travel+basic+overtime+woa+reimbursement;
-  months.push({key:monthKey(ms),label:monthLabel(ms),travel,basic,overtime,woa,expense:reimbursement,
+  const bonus=getMonthBonus(monthKey(ms));
+  const gross=travel+basic+overtime+woa+bonus+reimbursement;
+  months.push({key:monthKey(ms),label:monthLabel(ms),travel,basic,overtime,woa,bonus,expense:reimbursement,
     slopChest:ex.slopChest,internet:ex.internet,cashAdvance:ex.cashAdvance,monthlyExpenses,total:gross,
     netTotal:Math.max(0,gross-monthlyExpenses)});
  }
@@ -1861,6 +1917,8 @@ function renderContractMonths(now,start,end,signoff,travelStart,salary,basicWage
  $("monthTravel").textContent=fmtUSD(m.travel);$("monthBasic").textContent=fmtUSD(m.basic);
  $("monthOvertime").textContent=fmtUSD(m.overtime);$("monthWoa").textContent=fmtUSD(m.woa);
  $("monthExpense").textContent=fmtUSD(m.expense);
+ const bonusEl=$("monthBonus");
+ if(document.activeElement!==bonusEl)bonusEl.value=String(Number(m.bonus)||0);
  const slopEl=$("monthSlopChest"), internetEl=$("monthInternet"), cashEl=$("monthCashAdvance");
  if(document.activeElement!==slopEl)slopEl.value=String(Math.round(Number(m.slopChest)||0));
  if(document.activeElement!==internetEl)internetEl.value=String(Math.round(Number(m.internet)||0));
@@ -1927,7 +1985,9 @@ function update(){
     const travelPart=travelStart&&start&&travelStart<start ? travelEarnedBetween(travelStart,start,bw,start) : 0;
     const onboardPart=end?totalPaidContract(start,end,salary):0;
     const travelExpense=getTravelExpenses();
-    $("contractTotal").textContent=fmtUSD(Math.max(0,travelPart+onboardPart+travelExpense));
+    const bonusFrom=(travelStart&&start&&travelStart<start)?travelStart:start;
+    const bonusTotal=bonusFrom&&end?monthlyBonusTotalBetween(bonusFrom,end):0;
+    $("contractTotal").textContent=fmtUSD(Math.max(0,travelPart+onboardPart+travelExpense+bonusTotal));
   }
  }
  const is31=now.getDate()===31;
@@ -2009,7 +2069,9 @@ if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
   if(start&&f>start){
     forecastOnboard=paidAmountBetween(start,f,salary,start);
   }
-  let fe=forecastTravel+forecastOnboard;
+  const bonusFrom=(travelStart&&start&&travelStart<start)?travelStart:start;
+  const forecastBonus=bonusFrom&&f>=bonusFrom?monthlyBonusTotalBetween(bonusFrom,f):0;
+  let fe=forecastTravel+forecastOnboard+forecastBonus;
   const forecastExpense = f>=start ? getTravelExpenses() : 0;
   fe=Math.max(0,fe+forecastExpense);
   $("forecastEarn").textContent=fmtUSD(fe);
@@ -2041,11 +2103,22 @@ function updateSleep(perSec,payStart){
  $("sleepEarn").textContent=fmtUSD(travelEarn+onboardEarn);
 }
 ["salary","woaBasicWage","travelExpenses","travelStart","start","end","forecast","sleepStart","sleepEnd"].forEach(id=>$(id).addEventListener("input",update));
+const bonusInput=$("monthBonus");
+bonusInput.addEventListener("input",()=>{
+ setMonthBonus(contractMonthSelectedKey,bonusInput.value);
+ update();
+});
+bonusInput.addEventListener("blur",()=>{
+ const value=Math.max(0,parseFloat(bonusInput.value)||0);
+ bonusInput.value=String(value);
+ setMonthBonus(contractMonthSelectedKey,value);
+ update();
+});
 ["monthSlopChest","monthInternet","monthCashAdvance"].forEach(id=>{const el=$(id);if(!el)return;
  el.addEventListener("input",()=>{el.value=el.value.replace(/\D/g,"");setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":(id==="monthInternet"?"internet":"cashAdvance"),el.value||0);});
  el.addEventListener("blur",()=>{el.value=String(Math.round(Number(el.value)||0));setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":(id==="monthInternet"?"internet":"cashAdvance"),el.value);update();});
 });
-$("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(MONTHLY_EXPENSES_KEY);localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";$("travelExpenses").value="";initDates();$("salary").value=5100;update()};
+$("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(MONTHLY_EXPENSES_KEY);localStorage.removeItem(MONTHLY_BONUSES_KEY);localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";$("travelExpenses").value="";initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
 if ("serviceWorker" in navigator) {
@@ -2080,7 +2153,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.6 • Build 2026-09-11</div>
+<div class="app-version">Salary Tracker • v0.13.7 • Build 2026-11-08</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
