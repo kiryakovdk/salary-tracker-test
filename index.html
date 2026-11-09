@@ -1281,7 +1281,9 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
     const s=woaDate(entry.start), e=woaDate(entry.end);
     if(!s || s>=periodEnd || (e && e<periodStart))return;
     const effectiveStart=maxDate(s,periodStart);
-    const effectiveEnd=e && e<periodEnd?e:new Date(periodEnd.getTime()-1);
+    // WOA dates are inclusive calendar dates. Include Sign-off day when it
+    // is also the WOA end/report end, matching the monthly breakdown.
+    const effectiveEnd=e && e<periodEnd?e:periodEnd;
     if(effectiveEnd<effectiveStart)return;
     const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
     const minimumApplies=s>=periodStart && s<periodEnd;
