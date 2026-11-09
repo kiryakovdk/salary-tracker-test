@@ -1196,7 +1196,13 @@ function syncArchivedBonusForMonth(key,newBonus){
   month.total=Math.max(0,(Number(month.total)||0)+delta);
   month.netTotal=Math.max(0,(Number(month.total)||0)-(Number(month.monthlyExpenses)||0));
   contract.bonus=Math.max(0,(Number(contract.bonus)||0)+delta);
-  contract.total=Math.max(0,(Number(contract.total)||0)+delta);
+  if(contract.grossTotal!==undefined){
+    contract.grossTotal=Math.max(0,(Number(contract.grossTotal)||0)+delta);
+    contract.netTotal=Math.max(0,contract.grossTotal-(Number(contract.monthlyExpenses)||0));
+    contract.total=contract.netTotal;
+  }else{
+    contract.total=Math.max(0,(Number(contract.total)||0)+delta);
+  }
   changed=true;
  });
  if(changed){saveHistory(history);renderHistory();}
@@ -1204,7 +1210,7 @@ function syncArchivedBonusForMonth(key,newBonus){
 
 function renderAllTime(){
  const history=getHistory();
- const total=history.reduce((s,x)=>s+(Number(x.total)||((Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0)+(Number(x.bonus)||0))),0);
+ const total=history.reduce((s,x)=>s+(Number(x.netTotal ?? x.total)||((Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0)+(Number(x.bonus)||0))),0);
  $("allTimeTotal").textContent=fmtUSD(total);
  $("allTimeContracts").textContent=history.length;
 }
@@ -1245,8 +1251,10 @@ function renderHistory(){
        <div class="row"><span>Overtime</span><span>${fmtUSD(overtime)}</span></div>
        <div class="row"><span>WOA</span><span>${fmtUSD(woa)}</span></div>
        <div class="row"><span>Bonus</span><span>${fmtUSD(x.bonus||0)}</span></div>
-       <div class="row"><span>Travel expenses</span><span>${fmtUSD(expense)}</span></div>
-       <div class="row total-earned-row"><span>Contract total</span><span>${fmtUSD(x.total)}</span></div>
+       <div class="row"><span>Travel expenses reimbursed</span><span>${fmtUSD(expense)}</span></div>
+       <div class="row"><span>Gross contract earnings</span><span>${fmtUSD(x.grossTotal ?? x.total)}</span></div>
+       <div class="row"><span>Monthly expenses</span><span>-${fmtUSD(x.monthlyExpenses||0)}</span></div>
+       <div class="row total-earned-row"><span>Net contract earnings</span><span>${fmtUSD(x.netTotal ?? x.total)}</span></div>
       </div>
       ${months.length?`<div class="history-month"><div class="small">MONTHLY BREAKDOWN</div>
        ${months.map(month=>`<div class="history-month">
