@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.7</title>
+<title>Salary Tracker v0.13.8</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -1260,32 +1260,29 @@ function renderHistory(){
  }).join("");
 }
 function getWoaEarnedForPeriod(periodStart,periodEnd){
- const monthly=parseFloat($("woaBasicWage")?.value)||0;
- if(!periodStart||!periodEnd||monthly<=0||periodEnd<=periodStart)return 0;
- const entries=getWoaEntries();
- if(!entries.length)return 0;
- let total=0;
- entries.forEach(entry=>{
-  const s=woaDate(entry.start), e=woaDate(entry.end);
-  if(!s || s>=periodEnd)return;
-  if(e && e<=periodStart)return;
-
-  // Count WOA earned during this contract/sign-off period.
-  // If the WOA entry started during the period, the 5-day minimum applies.
-  const effectiveStart=s>periodStart?s:periodStart;
-  const effectiveEnd=e && e<periodEnd?e:periodEnd;
-  if(effectiveEnd<=effectiveStart)return;
-
-  const actual=calendarDaysInclusive(effectiveStart,effectiveEnd);
-  const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
-  const paid=s>=periodStart ? Math.max(paidCalendar,WOA_MIN_DAYS) : paidCalendar;
-  total += paid*(monthly/30);
- });
+  const monthly=parseFloat($("woaBasicWage")?.value)||0;
+  if(!periodStart||!periodEnd||monthly<=0||periodEnd<=periodStart)return 0;
+  const entries=getWoaEntries();
+  if(!entries.length)return 0;
+  const daily=monthly/30;
+  let total=0;
+  entries.forEach(entry=>{
+   const s=woaDate(entry.start), e=woaDate(entry.end);
+   if(!s || s>=periodEnd || (e && e<periodStart))return;
+   const effectiveStart=maxDate(s,periodStart);
+   const effectiveEnd=e && e<periodEnd?e:new Date(periodEnd.getTime()-1);
+   if(effectiveEnd<effectiveStart)return;
+   const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
+   const minimumApplies=s>=periodStart && s<periodEnd;
+   total += (minimumApplies?Math.max(paidCalendar,WOA_MIN_DAYS):paidCalendar)*daily;
+  });
+  return Math.max(0,total);
+});
  return Math.max(0,total);
 }
 
 function archiveCompletedContract(start,end,signoff,salary){
- if(!start||!end||!signoff||signoff<=end||signoff>new Date())return;
+  if(!start||!end||!signoff||signoff<end||signoff>new Date())return;
 
  const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
  const history=getHistory();
@@ -1405,20 +1402,23 @@ function woaActualDays(start,end){
  return calendarDaysInclusive(start,end);
 }
 function calcWoaEntry(entry,monthly,asOf){
- const s=woaDate(entry.start);
- if(!s||monthly<=0)return {actual:0,paid:0,earned:0};
-
- const e=woaDate(entry.end);
- const now=asOf instanceof Date ? asOf : new Date();
- const payStart=getDate("start");
-
- if(!e){
-  if(now < s)return {actual:0,paid:0,earned:0};
-  const endDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const actual=calendarDaysInclusive(s,endDay);
-  const paid=Math.max(countPaidCalendarDays(s,endDay,payStart),WOA_MIN_DAYS);
+  const s=woaDate(entry.start);
+  if(!s||monthly<=0)return {actual:0,paid:0,earned:0};
+  const e=woaDate(entry.end);
+  const now=asOf instanceof Date ? asOf : new Date();
+  const payStart=getDate("start");
+  if(e&&e<s)return {actual:0,paid:0,earned:0};
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(today<s)return {actual:0,paid:0,earned:0};
+  const actualEnd=e&&e<today?e:today;
+  const actual=calendarDaysInclusive(s,actualEnd);
+  const effectiveStart=payStart&&s<payStart?payStart:s;
+  if(actualEnd<effectiveStart)return {actual,paid:0,earned:0};
+  const paidCalendar=countPaidCalendarDays(effectiveStart,actualEnd,payStart);
+  const minimumApplies=!payStart||s>=payStart;
+  const paid=minimumApplies?Math.max(paidCalendar,WOA_MIN_DAYS):paidCalendar;
   return {actual,paid,earned:paid*(monthly/30)};
- }
+}
 
  if(e<s)return {actual:0,paid:0,earned:0};
 
@@ -1427,35 +1427,37 @@ function calcWoaEntry(entry,monthly,asOf){
  return {actual,paid,earned:paid*(monthly/30)};
 }
 function validateWoaEntries(entries){
- const v=entries.map((x,i)=>({i,s:woaDate(x.start),e:woaDate(x.end)}))
-  .filter(x=>x.s&&x.e&&x.e>=x.s).sort((a,b)=>a.s-b.s);
- for(let i=1;i<v.length;i++){
-  if(v[i].s<v[i-1].e)return {ok:false,a:v[i-1].i+1,b:v[i].i+1};
- }
+  const v=entries.map((x,i)=>({i,s:woaDate(x.start),e:woaDate(x.end)}))
+   .filter(x=>x.s&&(!x.e||x.e>=x.s)).sort((a,b)=>a.s-b.s);
+  for(let i=1;i<v.length;i++){
+   const previous=v[i-1];
+   if(!previous.e||v[i].s<=previous.e)return {ok:false,a:previous.i+1,b:v[i].i+1};
+  }
+  return {ok:true};
+}
  return {ok:true};
 }
 function getWoaEarned(asOf){
- const entries=getWoaEntries();
- const monthly=parseFloat($("woaBasicWage")?.value)||0;
- if(monthly<=0 || !validateWoaEntries(entries).ok)return 0;
-
- const d=asOf instanceof Date ? asOf : new Date();
- const payStart=getDate("start");
- const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
- let total=0;
- const daily=monthly/30;
-
- entries.forEach(entry=>{
-  const s=woaDate(entry.start);
-  const e=woaDate(entry.end);
-  if(!s || day<s)return;
-
-  const effectiveEnd = e && day>e ? e : day;
-  if(effectiveEnd<s)return;
-
-  const paidDays=countPaidCalendarDays(s,effectiveEnd,payStart);
-  total += Math.max(paidDays,WOA_MIN_DAYS)*daily;
- });
+  const entries=getWoaEntries();
+  const monthly=parseFloat($("woaBasicWage")?.value)||0;
+  if(monthly<=0 || !validateWoaEntries(entries).ok)return 0;
+  const d=asOf instanceof Date ? asOf : new Date();
+  const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const payStart=getDate("start");
+  const daily=monthly/30;
+  let total=0;
+  entries.forEach(entry=>{
+   const s=woaDate(entry.start), e=woaDate(entry.end);
+   if(!s||day<s||(e&&e<s))return;
+   const effectiveEnd=e&&e<day?e:day;
+   const effectiveStart=payStart&&s<payStart?payStart:s;
+   if(effectiveEnd<effectiveStart)return;
+   const paidDays=countPaidCalendarDays(effectiveStart,effectiveEnd,payStart);
+   const minimumApplies=!payStart||s>=payStart;
+   total+=(minimumApplies?Math.max(paidDays,WOA_MIN_DAYS):paidDays)*daily;
+  });
+  return Math.max(0,total);
+});
 
  return Math.max(0,total);
 }
@@ -2153,7 +2155,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.7 • Build 2026-11-08</div>
+<div class="app-version">Salary Tracker • v0.13.8 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
