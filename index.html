@@ -1313,7 +1313,9 @@ function archiveCompletedContract(start,end,signoff,salary){
    ? buildContractMonths(signoff,start,end,signoff,travelStart,salary,basicWage,travelExpense)
    : [];
  const bonus=months.reduce((sum,m)=>sum+(Number(m.bonus)||0),0);
- const total=contract+overtime+woa+bonus;
+ const grossTotal=contract+overtime+woa+bonus;
+ const monthlyExpenses=months.reduce((sum,m)=>sum+(Number(m.monthlyExpenses)||0),0);
+ const netTotal=Math.max(0,grossTotal-monthlyExpenses);
 
  history.push({
    key,
@@ -1330,8 +1332,10 @@ function archiveCompletedContract(start,end,signoff,salary){
    bonus,
    overtimeTime:fmtDuration((signoff-end)/1000),
    months,
-   monthlyExpenses:months.map(m=>({key:m.key,label:m.label,slopChest:m.slopChest||0,internet:m.internet||0,cashAdvance:m.cashAdvance||0,total:m.monthlyExpenses||0})),
-   total
+   monthlyExpenses,
+   grossTotal,
+   netTotal,
+   total:netTotal
  });
  saveHistory(history);
  renderHistory();
@@ -2083,22 +2087,33 @@ if(!signedOffBeforeToday && woaDailyToday>0 && isPaidCalendarDay(todayStart,payS
  try{renderSalaryGraph(start,end,signoff,now,salary,earned);}catch(e){console.error(e);}
 }
 function updateSleep(perSec,payStart){
- let ss=$("sleepStart").value,se=$("sleepEnd").value;if(!ss||!se)return;
- let now=new Date(),s=ss.split(":").map(Number),e=se.split(":").map(Number);
- let a=new Date(now.getFullYear(),now.getMonth(),now.getDate(),s[0],s[1]);
+ const ss=$("sleepStart").value,se=$("sleepEnd").value;
+ if(!ss||!se)return;
+ const now=new Date(),s=ss.split(":").map(Number),e=se.split(":").map(Number);
+ const a=new Date(now.getFullYear(),now.getMonth(),now.getDate(),s[0],s[1]);
  let b=new Date(now.getFullYear(),now.getMonth(),now.getDate(),e[0],e[1]);
  if(b<=a)b.setDate(b.getDate()+1);
- const travel=getTravelStart();
- const bw=parseFloat($("woaBasicWage")?.value)||0;
- let travelEarn=0,onboardEarn=0;
- if(travel&&payStart&&b>travel&&a<payStart){
-   const ta=a>travel?a:travel;
-   const tb=b<payStart?b:payStart;
-   if(tb>ta) travelEarn=paidAmountBetween(ta,tb,bw,travel);
+
+ // Sleep earnings follow the same earning stop as the main tracker.
+ // Contract End changes the rate to overtime, but Actual Sign Off stops all pay.
+ const signoff=getDate("signoff");
+ const earningEnd=signoff?minDate(b,signoff):b;
+ if(earningEnd<=a||!payStart){
+   $("sleepEarn").textContent=fmtUSD(0);
+   return;
  }
- if(payStart&&b>payStart){
-   const oa=a>payStart?a:payStart;
-   if(b>oa) onboardEarn=paidAmountBetween(oa,b,parseFloat($("salary").value)||0,payStart);
+ const travel=getTravelStart();
+ const bw=Math.max(0,parseFloat($("woaBasicWage")?.value)||0);
+ const salary=Math.max(0,parseFloat($("salary").value)||0);
+ let travelEarn=0,onboardEarn=0;
+ if(travel&&travel<payStart&&bw>0){
+   const ta=maxDate(a,travel);
+   const tb=minDate(earningEnd,payStart);
+   if(tb>ta)travelEarn=paidAmountBetween(ta,tb,bw,travel);
+ }
+ if(salary>0){
+   const oa=maxDate(a,payStart);
+   if(earningEnd>oa)onboardEarn=paidAmountBetween(oa,earningEnd,salary,payStart);
  }
  $("sleepEarn").textContent=fmtUSD(travelEarn+onboardEarn);
 }
@@ -2153,7 +2168,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.13 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.13.14 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
