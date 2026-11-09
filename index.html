@@ -2034,7 +2034,7 @@ const woaDailyToday=woaMonthlyToday/30;
 const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
 const woaEntriesToday=getWoaEntries();
 const payStartForToday=start;
-if(woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
+if(!signedOffBeforeToday && woaDailyToday>0 && isPaidCalendarDay(todayStart,payStartForToday)){
   woaEntriesToday.forEach(entry=>{
     const ws=woaDate(entry.start);
     const we=woaDate(entry.end);
