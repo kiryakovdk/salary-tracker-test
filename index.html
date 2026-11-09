@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.8</title>
+<title>Salary Tracker v0.13.12</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -1866,11 +1866,13 @@ function buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,
   const months=[];
   for(let cursor=new Date(monthStartDate(reportStart));cursor<=monthStartDate(reportEnd);cursor.setMonth(cursor.getMonth()+1)){
     const ms=new Date(cursor),me=monthEndExclusive(ms);
-    const isTravelMonth=travelStart&&ms.getFullYear()===travelStart.getFullYear()&&ms.getMonth()===travelStart.getMonth();
-    const travelFrom=isTravelMonth?travelStart:null;
-    const travelTo=isTravelMonth?minDate(me,start):null;
-    const travelEnd=travelTo&&travelTo<=reportEnd?travelTo:(travelTo?reportEnd:null);
-    const travel=travelFrom&&travelEnd&&travelEnd>travelFrom?paidAmountBetween(travelFrom,travelEnd,basicWage,travelStart):0;
+    // Allocate Travel to Vessel across every month it overlaps, not only
+    // the month in which travel started. The interval ends at boarding.
+    const travelFrom=travelStart?maxDate(ms,travelStart):null;
+    const travelTo=travelStart&&start?minDate(me,start):null;
+    const travelEnd=travelTo?minDate(travelTo,reportEnd):null;
+    const travel=travelFrom&&travelEnd&&travelEnd>travelFrom
+      ?paidAmountBetween(travelFrom,travelEnd,basicWage,travelStart):0;
     const basicFrom=maxDate(ms,start),basicMonthEnd=end?minDate(me,end):me,basicTo=minDate(basicMonthEnd,reportEnd);
     const basic=basicTo>basicFrom?paidAmountBetween(basicFrom,basicTo,salary,start):0;
     const otFrom=end?maxDate(ms,end):null,otMonthEnd=end?minDate(me,reportEnd):null;
@@ -2147,7 +2149,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.11 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.13.12 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
