@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.15</title>
+<title>Salary Tracker v0.14.1</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -804,10 +804,6 @@ body {
 <div class="card screen-card screen-history" id="historyCard">
  <div class="section-title">CONTRACT HISTORY</div>
  <div id="historyList"><div class="small">No completed contracts yet.</div></div>
- <div class="history-actions">
-  <button id="testContract" class="secondary" type="button">TEST CONTRACT</button>
-  <button id="clearTestHistory" class="secondary" type="button">CLEAR TEST HISTORY</button>
- </div>
  <div class="row" style="margin-top:12px"><span>Total contracts</span><span id="historyCount">0</span></div>
  <div class="row"><span>Total earned</span><span id="historyTotal">$0.00</span></div>
  </div>
@@ -1177,7 +1173,9 @@ function getHistory(){
  try{
   const raw=localStorage.getItem("salaryTrackerHistory");
   const x=raw?JSON.parse(raw):[];
-  return Array.isArray(x)?x.filter(item=>item&&typeof item==="object"&&!Array.isArray(item)):[];
+  const valid=Array.isArray(x)?x.filter(item=>item&&typeof item==="object"&&!Array.isArray(item)&&!item.test):[];
+  if(Array.isArray(x)&&valid.length!==x.length)saveHistory(valid);
+  return valid;
  }catch(e){
   console.error("History storage could not be read",e);
   return [];
@@ -1267,7 +1265,7 @@ function renderHistory(){
    return `<details class="history-item-rich">
      <summary>
       <div>
-       <div class="history-contract-title">Contract #${number}${x.test?" • TEST":""}</div>
+       <div class="history-contract-title">Contract #${number}</div>
        <div class="history-contract-date">${x.start} → ${x.signoff}</div>
       </div>
       <div class="history-contract-total">${fmtUSD(historyNetValue(x))}</div>
@@ -1376,43 +1374,6 @@ function archiveCompletedContract(start,end,signoff,salary){
  saveHistory(history);
  renderHistory();
 }
-
-
-function createTestContract(){
- const salary=5100;
- const start=new Date(2026,0,1,0,0,0);
- const end=new Date(2026,0,10,0,0,0);
- const signoff=new Date(2026,0,12,0,0,0);
- const key=["TEST",start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
- const history=getHistory();
- if(history.some(x=>x.key===key)){renderHistory();return;}
- const contract=totalPaidContract(start,end,salary);
- const overtime=paidAmountBetween(end,signoff,salary,start);
- const months=typeof buildContractMonths==="function"
-   ? buildContractMonths(signoff,start,end,signoff,null,salary,0,0):[];
- const bonus=months.reduce((sum,m)=>sum+(Number(m.bonus)||0),0);
- history.push({
-   key,test:true,start:start.toLocaleDateString("en-US"),
-   end:end.toLocaleDateString("en-US"),
-   signoff:signoff.toLocaleDateString("en-US"),
-   salary,basic:contract,travel:0,travelExpense:0,contract,
-   overtime,woa:0,bonus,overtimeTime:fmtDuration((signoff-end)/1000),
-   months,monthlyExpenses:0,grossTotal:contract+overtime+bonus,
-   netTotal:contract+overtime+bonus,total:contract+overtime+bonus
- });
- saveHistory(history);
- renderHistory();
-}
-
-
-function clearTestHistory(){
- const history=getHistory().filter(x=>!x.test);
- saveHistory(history);
- renderHistory();
-}
-
-
-
 
 
 /* ---------- WOA / Warlike Operations Area ---------- */
@@ -2179,7 +2140,7 @@ if ("serviceWorker" in navigator) {
 const savedGoal=localStorage.getItem("salaryTrackerEarningsGoal");
 if(savedGoal!==null) $("earningsGoal").value=savedGoal;
 $("earningsGoal").addEventListener("input",()=>{localStorage.setItem("salaryTrackerEarningsGoal",$("earningsGoal").value);update();});
-load();renderHistory();loadRates();initWoa();update();$("testContract").addEventListener("click",createTestContract);$("clearTestHistory").addEventListener("click",clearTestHistory);setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
+load();renderHistory();loadRates();initWoa();update();setInterval(update,1000);setInterval(loadRates, 6*60*60*1000);
 
 
 function setScreen(screen){
@@ -2205,7 +2166,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.15 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.14.1 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
