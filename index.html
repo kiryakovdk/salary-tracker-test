@@ -1210,7 +1210,7 @@ function syncArchivedBonusForMonth(key,newBonus){
 
 function renderAllTime(){
  const history=getHistory();
- const total=history.reduce((s,x)=>s+(Number(x.netTotal ?? x.total)||((Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0)+(Number(x.bonus)||0))),0);
+ const total=history.reduce((sum,x)=>{const fallback=(Number(x.contract)||0)+(Number(x.overtime)||0)+(Number(x.woa)||0)+(Number(x.bonus)||0);const value=x.netTotal??x.total??fallback;return sum+Math.max(0,Number(value)||0);},0);
  $("allTimeTotal").textContent=fmtUSD(total);
  $("allTimeContracts").textContent=history.length;
 }
