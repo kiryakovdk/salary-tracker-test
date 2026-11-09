@@ -1267,18 +1267,16 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
   const daily=monthly/30;
   let total=0;
   entries.forEach(entry=>{
-   const s=woaDate(entry.start), e=woaDate(entry.end);
-   if(!s || s>=periodEnd || (e && e<periodStart))return;
-   const effectiveStart=maxDate(s,periodStart);
-   const effectiveEnd=e && e<periodEnd?e:new Date(periodEnd.getTime()-1);
-   if(effectiveEnd<effectiveStart)return;
-   const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
-   const minimumApplies=s>=periodStart && s<periodEnd;
-   total += (minimumApplies?Math.max(paidCalendar,WOA_MIN_DAYS):paidCalendar)*daily;
+    const s=woaDate(entry.start), e=woaDate(entry.end);
+    if(!s || s>=periodEnd || (e && e<periodStart))return;
+    const effectiveStart=maxDate(s,periodStart);
+    const effectiveEnd=e && e<periodEnd?e:new Date(periodEnd.getTime()-1);
+    if(effectiveEnd<effectiveStart)return;
+    const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
+    const minimumApplies=s>=periodStart && s<periodEnd;
+    total+=(minimumApplies?Math.max(paidCalendar,WOA_MIN_DAYS):paidCalendar)*daily;
   });
   return Math.max(0,total);
-});
- return Math.max(0,total);
 }
 
 function archiveCompletedContract(start,end,signoff,salary){
@@ -1419,48 +1417,37 @@ function calcWoaEntry(entry,monthly,asOf){
   const paid=minimumApplies?Math.max(paidCalendar,WOA_MIN_DAYS):paidCalendar;
   return {actual,paid,earned:paid*(monthly/30)};
 }
-
- if(e<s)return {actual:0,paid:0,earned:0};
-
- const actual=woaActualDays(s,e);
- const paid=Math.max(countPaidCalendarDays(s,e,payStart),WOA_MIN_DAYS);
- return {actual,paid,earned:paid*(monthly/30)};
-}
 function validateWoaEntries(entries){
   const v=entries.map((x,i)=>({i,s:woaDate(x.start),e:woaDate(x.end)}))
-   .filter(x=>x.s&&(!x.e||x.e>=x.s)).sort((a,b)=>a.s-b.s);
+    .filter(x=>x.s&&(!x.e||x.e>=x.s)).sort((a,b)=>a.s-b.s);
   for(let i=1;i<v.length;i++){
-   const previous=v[i-1];
-   if(!previous.e||v[i].s<=previous.e)return {ok:false,a:previous.i+1,b:v[i].i+1};
+    const previous=v[i-1];
+    if(!previous.e||v[i].s<=previous.e)return {ok:false,a:previous.i+1,b:v[i].i+1};
   }
   return {ok:true};
-}
- return {ok:true};
 }
 function getWoaEarned(asOf){
   const entries=getWoaEntries();
   const monthly=parseFloat($("woaBasicWage")?.value)||0;
-  if(monthly<=0 || !validateWoaEntries(entries).ok)return 0;
-  const d=asOf instanceof Date ? asOf : new Date();
+  if(monthly<=0||!validateWoaEntries(entries).ok)return 0;
+  const d=asOf instanceof Date?asOf:new Date();
   const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
   const payStart=getDate("start");
   const daily=monthly/30;
   let total=0;
   entries.forEach(entry=>{
-   const s=woaDate(entry.start), e=woaDate(entry.end);
-   if(!s||day<s||(e&&e<s))return;
-   const effectiveEnd=e&&e<day?e:day;
-   const effectiveStart=payStart&&s<payStart?payStart:s;
-   if(effectiveEnd<effectiveStart)return;
-   const paidDays=countPaidCalendarDays(effectiveStart,effectiveEnd,payStart);
-   const minimumApplies=!payStart||s>=payStart;
-   total+=(minimumApplies?Math.max(paidDays,WOA_MIN_DAYS):paidDays)*daily;
+    const s=woaDate(entry.start),e=woaDate(entry.end);
+    if(!s||day<s||(e&&e<s))return;
+    const effectiveEnd=e&&e<day?e:day;
+    const effectiveStart=payStart&&s<payStart?payStart:s;
+    if(effectiveEnd<effectiveStart)return;
+    const paidDays=countPaidCalendarDays(effectiveStart,effectiveEnd,payStart);
+    const minimumApplies=!payStart||s>=payStart;
+    total+=(minimumApplies?Math.max(paidDays,WOA_MIN_DAYS):paidDays)*daily;
   });
   return Math.max(0,total);
-});
-
- return Math.max(0,total);
 }
+
 function formatWoaDays(v){
  // WOA uses inclusive calendar days for completed entries:
  // 0.1..1.0 => 1 day, 1.01..2.0 => 2 days, etc.
@@ -1841,13 +1828,44 @@ function woaEarnedForMonth(monthStart,monthEnd,contractStart,reportEnd,monthlyWa
     const overlapEnd=new Date(Math.min(e.getTime(),monthEnd.getTime()-1));
     if(overlapEnd<overlapStart)return;
     const monthPaid=countPaidCalendarDays(overlapStart,overlapEnd,contractStart);
-    const minimumApplies=s>= (contractStart||monthStart) &&
-      monthKey(s)===monthKey(monthStart);
+    const minimumApplies=s>=(contractStart||monthStart)&&monthKey(s)===monthKey(monthStart);
     total+=(minimumApplies?Math.max(monthPaid,WOA_MIN_DAYS):monthPaid)*daily;
   });
   return total;
 }
- return months;
+function getContractReportEnd(now,end,signoff){
+  if(signoff&&signoff<=now)return signoff;
+  return now;
+}
+function buildContractMonths(now,start,end,signoff,travelStart,salary,basicWage,travelExpense){
+  if(!start||!salary)return [];
+  const reportEnd=getContractReportEnd(now,end,signoff);
+  const reportStart=(travelStart&&travelStart<start)?travelStart:start;
+  if(reportEnd<reportStart)return [];
+  const months=[];
+  for(let cursor=new Date(monthStartDate(reportStart));cursor<=monthStartDate(reportEnd);cursor.setMonth(cursor.getMonth()+1)){
+    const ms=new Date(cursor),me=monthEndExclusive(ms);
+    const isTravelMonth=travelStart&&ms.getFullYear()===travelStart.getFullYear()&&ms.getMonth()===travelStart.getMonth();
+    const travelFrom=isTravelMonth?travelStart:null;
+    const travelTo=isTravelMonth?minDate(me,start):null;
+    const travelEnd=travelTo&&travelTo<=reportEnd?travelTo:(travelTo?reportEnd:null);
+    const travel=travelFrom&&travelEnd&&travelEnd>travelFrom?paidAmountBetween(travelFrom,travelEnd,basicWage,travelStart):0;
+    const basicFrom=maxDate(ms,start),basicMonthEnd=end?minDate(me,end):me,basicTo=minDate(basicMonthEnd,reportEnd);
+    const basic=basicTo>basicFrom?paidAmountBetween(basicFrom,basicTo,salary,start):0;
+    const otFrom=end?maxDate(ms,end):null,otMonthEnd=end?minDate(me,reportEnd):null;
+    const overtime=otFrom&&otMonthEnd&&otMonthEnd>otFrom?paidAmountBetween(otFrom,otMonthEnd,salary,start):0;
+    const woa=woaEarnedForMonth(ms,me,start,reportEnd,basicWage);
+    const first=ms.getFullYear()===start.getFullYear()&&ms.getMonth()===start.getMonth();
+    const reimbursement=first&&reportEnd>=start?travelExpense:0;
+    const ex=getMonthExpenseData(monthKey(ms));
+    const monthlyExpenses=ex.slopChest+ex.internet+ex.cashAdvance;
+    const bonus=getMonthBonus(monthKey(ms));
+    const gross=travel+basic+overtime+woa+bonus+reimbursement;
+    months.push({key:monthKey(ms),label:monthLabel(ms),travel,basic,overtime,woa,bonus,expense:reimbursement,
+      slopChest:ex.slopChest,internet:ex.internet,cashAdvance:ex.cashAdvance,monthlyExpenses,total:gross,
+      netTotal:Math.max(0,gross-monthlyExpenses)});
+  }
+  return months;
 }
 
 let contractMonthSelectedKey=null;
