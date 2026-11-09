@@ -1824,7 +1824,7 @@ function maxDate(a,b){ return new Date(Math.max(a.getTime(),b.getTime())); }
 function minDate(a,b){ return new Date(Math.min(a.getTime(),b.getTime())); }
 
 function woaEarnedForMonth(monthStart,monthEnd,contractStart,reportEnd,monthlyWage){
-  if(monthlyWage<=0)return 0;
+  if(monthlyWage<=0||!reportEnd)return 0;
   const entries=getWoaEntries();
   if(!entries.length)return 0;
   const daily=monthlyWage/30;
@@ -1835,12 +1835,20 @@ function woaEarnedForMonth(monthStart,monthEnd,contractStart,reportEnd,monthlyWa
     const entryEnd=woaDate(entry.end);
     const e=entryEnd&&entryEnd<reportEnd?entryEnd:reportEnd;
     if(e<monthStart||s>=monthEnd)return;
+
+    // Count the WOA's paid calendar days across the whole entry, not month by month.
+    const effectiveStart=maxDate(s,contractStart||s);
+    if(e<effectiveStart)return;
+    const totalPaidDays=countPaidCalendarDays(effectiveStart,e,contractStart);
+    const minimumApplies=s>=(contractStart||monthStart);
+    const minimumTopUp=minimumApplies?Math.max(0,WOA_MIN_DAYS-totalPaidDays):0;
+
     const overlapStart=maxDate(maxDate(s,monthStart),contractStart||monthStart);
     const overlapEnd=new Date(Math.min(e.getTime(),monthEnd.getTime()-1));
     if(overlapEnd<overlapStart)return;
     const monthPaid=countPaidCalendarDays(overlapStart,overlapEnd,contractStart);
-    const minimumApplies=s>=(contractStart||monthStart)&&monthKey(s)===monthKey(monthStart);
-    total+=(minimumApplies?Math.max(monthPaid,WOA_MIN_DAYS):monthPaid)*daily;
+    const topUpBelongsHere=minimumApplies&&monthKey(s)===monthKey(monthStart);
+    total+=(monthPaid+(topUpBelongsHere?minimumTopUp:0))*daily;
   });
   return total;
 }
