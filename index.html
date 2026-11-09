@@ -1279,14 +1279,14 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
   let total=0;
   entries.forEach(entry=>{
     const s=woaDate(entry.start), e=woaDate(entry.end);
-    if(!s || s>=periodEnd || (e && e<periodStart))return;
+    if(!s || s>periodEnd || (e && e<periodStart))return;
     const effectiveStart=maxDate(s,periodStart);
     // WOA dates are inclusive calendar dates. Include Sign-off day when it
     // is also the WOA end/report end, matching the monthly breakdown.
     const effectiveEnd=e && e<periodEnd?e:periodEnd;
     if(effectiveEnd<effectiveStart)return;
     const paidCalendar=countPaidCalendarDays(effectiveStart,effectiveEnd,periodStart);
-    const minimumApplies=s>=periodStart && s<periodEnd;
+    const minimumApplies=s>=periodStart && s<=periodEnd;
     total+=(minimumApplies?Math.max(paidCalendar,WOA_MIN_DAYS):paidCalendar)*daily;
   });
   return Math.max(0,total);
