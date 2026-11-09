@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.12</title>
+<title>Salary Tracker v0.13.13</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -1942,6 +1942,7 @@ function update(){
  let currentPerSec=signedOffBeforeToday?0:calendarDayPerSecond(now,currentRate);
  let currentPaidDay=signedOffBeforeToday?0:currentRate/payableDaysInMonth(now.getFullYear(),now.getMonth());
  updateBoardTime(start,end,signoff,now);
+ $("liveStatus").textContent=signedOffBeforeToday?"SIGNED OFF • EARNING STOPPED":"EARNING RUNNING";
 
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary,start);
@@ -2152,7 +2153,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.12 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.13.13 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
