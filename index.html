@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.13.14</title>
+<title>Salary Tracker v0.13.15</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -931,6 +931,7 @@ function setMonthExpense(key,type,value){
  if(!all[key])all[key]={};
  all[key][type]=Math.max(0,parseFloat(value)||0);
  saveMonthlyExpenses(all);
+ syncArchivedMonthForKey(key);
 }
 function firstEarningMonthExpense(asOf,payStart){
   const expense=getTravelExpenses();
@@ -1174,38 +1175,65 @@ function updateOvertime(end,signoff,now,salary,payStart){
 
 function getHistory(){
  try{
-  const x=JSON.parse(localStorage.getItem("salaryTrackerHistory")||"[]");
-  return Array.isArray(x)?x:[];
- }catch(e){return []}
+  const raw=localStorage.getItem("salaryTrackerHistory");
+  const x=raw?JSON.parse(raw):[];
+  return Array.isArray(x)?x.filter(item=>item&&typeof item==="object"&&!Array.isArray(item)):[];
+ }catch(e){
+  console.error("History storage could not be read",e);
+  return [];
+ }
 }
 function saveHistory(history){
- localStorage.setItem("salaryTrackerHistory",JSON.stringify(history));
+ try{
+  localStorage.setItem("salaryTrackerHistory",JSON.stringify(Array.isArray(history)?history:[]));
+  return true;
+ }catch(e){
+  console.error("History could not be saved",e);
+  return false;
+ }
+}
+function historyNetValue(x){
+ if(x&&x.netTotal!==undefined&&x.netTotal!==null)return Math.max(0,Number(x.netTotal)||0);
+ if(x&&x.total!==undefined&&x.total!==null)return Math.max(0,Number(x.total)||0);
+ const gross=(Number(x?.contract)||0)+(Number(x?.overtime)||0)+(Number(x?.woa)||0)+(Number(x?.bonus)||0);
+ return Math.max(0,gross-(Number(x?.monthlyExpenses)||0));
+}
+function syncArchivedMonthForKey(key){
+ const history=getHistory();
+ let changed=false;
+ history.forEach(contract=>{
+  if(!contract||!Array.isArray(contract.months))return;
+  const month=contract.months.find(item=>item&&item.key===key);
+  if(!month)return;
+  const gross=Math.max(0,
+    (Number(month.travel)||0)+(Number(month.basic)||0)+(Number(month.overtime)||0)+
+    (Number(month.woa)||0)+(Number(month.bonus)||0)+(Number(month.expense)||0));
+  const expenses=Math.max(0,(Number(month.slopChest)||0)+(Number(month.internet)||0)+(Number(month.cashAdvance)||0));
+  month.monthlyExpenses=expenses;
+  month.total=gross;
+  month.netTotal=Math.max(0,gross-expenses);
+  const months=contract.months;
+  contract.grossTotal=months.reduce((sum,m)=>sum+(Number(m.total)||0),0);
+  contract.monthlyExpenses=months.reduce((sum,m)=>sum+(Number(m.monthlyExpenses)||0),0);
+  contract.bonus=months.reduce((sum,m)=>sum+(Number(m.bonus)||0),0);
+  contract.netTotal=Math.max(0,contract.grossTotal-contract.monthlyExpenses);
+  contract.total=contract.netTotal;
+  changed=true;
+ });
+ if(changed){saveHistory(history);renderHistory();}
 }
 function syncArchivedBonusForMonth(key,newBonus){
  const history=getHistory();
  let changed=false;
  history.forEach(contract=>{
-  if(!Array.isArray(contract.months))return;
-  const month=contract.months.find(item=>item.key===key);
+  if(!contract||!Array.isArray(contract.months))return;
+  const month=contract.months.find(item=>item&&item.key===key);
   if(!month)return;
-  const previous=Math.max(0,Number(month.bonus)||0);
-  const next=Math.max(0,Number(newBonus)||0);
-  const delta=next-previous;
-  if(Math.abs(delta)<0.000001)return;
-  month.bonus=next;
-  month.total=Math.max(0,(Number(month.total)||0)+delta);
-  month.netTotal=Math.max(0,(Number(month.total)||0)-(Number(month.monthlyExpenses)||0));
-  contract.bonus=Math.max(0,(Number(contract.bonus)||0)+delta);
-  if(contract.grossTotal!==undefined){
-    contract.grossTotal=Math.max(0,(Number(contract.grossTotal)||0)+delta);
-    contract.netTotal=Math.max(0,contract.grossTotal-(Number(contract.monthlyExpenses)||0));
-    contract.total=contract.netTotal;
-  }else{
-    contract.total=Math.max(0,(Number(contract.total)||0)+delta);
-  }
+  month.bonus=Math.max(0,Number(newBonus)||0);
   changed=true;
  });
- if(changed){saveHistory(history);renderHistory();}
+ if(changed)saveHistory(history);
+ syncArchivedMonthForKey(key);
 }
 
 function renderAllTime(){
@@ -1220,7 +1248,7 @@ function renderHistory(){
  renderAllTime();
  const list=$("historyList");
  $("historyCount").textContent=history.length;
- const total=history.reduce((sum,x)=>sum+(Number(x.total)||0),0);
+ const total=history.reduce((sum,x)=>sum+historyNetValue(x),0);
  $("historyTotal").textContent=fmtUSD(total);
 
  if(!history.length){
@@ -1242,7 +1270,7 @@ function renderHistory(){
        <div class="history-contract-title">Contract #${number}${x.test?" • TEST":""}</div>
        <div class="history-contract-date">${x.start} → ${x.signoff}</div>
       </div>
-      <div class="history-contract-total">${fmtUSD(x.total)}</div>
+      <div class="history-contract-total">${fmtUSD(historyNetValue(x))}</div>
      </summary>
      <div class="history-detail">
       <div class="history-detail-grid">
@@ -1252,9 +1280,9 @@ function renderHistory(){
        <div class="row"><span>WOA</span><span>${fmtUSD(woa)}</span></div>
        <div class="row"><span>Bonus</span><span>${fmtUSD(x.bonus||0)}</span></div>
        <div class="row"><span>Travel expenses reimbursed</span><span>${fmtUSD(expense)}</span></div>
-       <div class="row"><span>Gross contract earnings</span><span>${fmtUSD(x.grossTotal ?? x.total)}</span></div>
+       <div class="row"><span>Gross contract earnings</span><span>${fmtUSD(x.grossTotal ?? ((Number(x.total)||0)+(Number(x.monthlyExpenses)||0)))}</span></div>
        <div class="row"><span>Monthly expenses</span><span>-${fmtUSD(x.monthlyExpenses||0)}</span></div>
-       <div class="row total-earned-row"><span>Net contract earnings</span><span>${fmtUSD(x.netTotal ?? x.total)}</span></div>
+       <div class="row total-earned-row"><span>Net contract earnings</span><span>${fmtUSD(historyNetValue(x))}</span></div>
       </div>
       ${months.length?`<div class="history-month"><div class="small">MONTHLY BREAKDOWN</div>
        ${months.map(month=>`<div class="history-month">
@@ -1369,7 +1397,8 @@ function createTestContract(){
    signoff:signoff.toLocaleDateString("en-US"),
    salary,basic:contract,travel:0,travelExpense:0,contract,
    overtime,woa:0,bonus,overtimeTime:fmtDuration((signoff-end)/1000),
-   months,total:contract+overtime+bonus
+   months,monthlyExpenses:0,grossTotal:contract+overtime+bonus,
+   netTotal:contract+overtime+bonus,total:contract+overtime+bonus
  });
  saveHistory(history);
  renderHistory();
@@ -2176,7 +2205,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.13.14 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.13.15 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
