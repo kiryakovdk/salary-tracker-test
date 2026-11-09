@@ -1936,10 +1936,11 @@ function monthlyExpensesEarnedUntil(now,start,end,signoff,travelStart,salary,bas
 function update(){
  let salary=Math.max(0,parseFloat($("salary").value)||0), start=getDate("start"), travelStart=getDate("travelStart"), end=getDate("end"), signoff=getDate("signoff"), now=new Date();
  const basicWageNow=parseFloat($("woaBasicWage")?.value)||0;
+ const signedOffBeforeToday=!!(signoff && new Date(now.getFullYear(),now.getMonth(),now.getDate())>signoff);
  const travelActive=travelStart && start && now>=travelStart && now<start;
  const currentRate=travelActive ? basicWageNow : salary;
- let currentPerSec=calendarDayPerSecond(now,currentRate);
- let currentPaidDay=currentRate/payableDaysInMonth(now.getFullYear(),now.getMonth());
+ let currentPerSec=signedOffBeforeToday?0:calendarDayPerSecond(now,currentRate);
+ let currentPaidDay=signedOffBeforeToday?0:currentRate/payableDaysInMonth(now.getFullYear(),now.getMonth());
  updateBoardTime(start,end,signoff,now);
 
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
@@ -2000,25 +2001,27 @@ function update(){
    : monthDays===28 ? "28 paid days" : monthDays===29 ? "29 paid days" : "30 paid days";
  // Today earnings are broken down using the same components as Total Earned.
  let dayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
- let paidSecondsToday=paidBetween(dayStart,now,start);
+ // Once the calendar day is after Actual Sign Off, today's live accrual is zero.
+ const todayNow=signedOffBeforeToday?dayStart:now;
+ let paidSecondsToday=paidBetween(dayStart,todayNow,start);
  let onboardBasicToday=0;
- if(start && now>dayStart){
+ if(start && todayNow>dayStart){
    const onboardFrom=dayStart>start?dayStart:start;
-   if(now>onboardFrom) onboardBasicToday=paidAmountBetween(onboardFrom,now,salary,start);
+   if(now>onboardFrom) onboardBasicToday=paidAmountBetween(onboardFrom,todayNow,salary,start);
  }
  const basicWageToday=parseFloat($("woaBasicWage")?.value)||0;
  let travelToday=0;
- if(travelStart && start && dayStart>=travelStart && dayStart<start && now>dayStart){
-   const to=new Date(Math.min(now.getTime(),start.getTime()));
+ if(travelStart && start && dayStart>=travelStart && dayStart<start && todayNow>dayStart){
+   const to=new Date(Math.min(todayNow.getTime(),start.getTime()));
    travelToday=paidAmountBetween(dayStart,to,basicWageToday,travelStart);
  }
  let basicToday=onboardBasicToday+travelToday;
 
  // Overtime earned today, only for time after Contract End.
  let overtimeToday=0;
- if(end && now>end){
+ if(end && todayNow>end){
    const otStart=dayStart>end?dayStart:end;
-   const otEnd=signoff && signoff<now?signoff:now;
+   const otEnd=signoff && signoff<todayNow?signoff:todayNow;
    if(otEnd>otStart) overtimeToday=paidAmountBetween(otStart,otEnd,salary,start);
  }
 
