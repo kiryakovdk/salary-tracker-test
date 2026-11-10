@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.14.5</title>
+<title>Salary Tracker v0.14.6</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -821,6 +821,7 @@ body {
  <div id="historyList"><div class="small">No completed contracts yet.</div></div>
  <div class="row" style="margin-top:12px"><span>Total contracts</span><span id="historyCount">0</span></div>
  <div class="row"><span>Total earned</span><span id="historyTotal">$0.00</span></div>
+ <div class="history-backup-actions" style="margin-top:12px"><button type="button" id="pdfAllHistoryBtn" class="secondary">EXPORT HISTORY PDF</button></div>
  <div class="history-backup">
   <div class="section-title">HISTORY BACKUP &amp; RESTORE</div>
   <div class="history-backup-actions">
@@ -1276,6 +1277,33 @@ function renderAllTime(){
  $("allTimeContracts").textContent=history.length;
 }
 
+function reportEscape(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function reportMoney(value){return fmtUSD(Number(value)||0);}
+function openPdfReport(title,body){
+ const win=window.open("","_blank");if(!win){alert("Allow pop-ups for Salary Tracker to create the PDF report.");return;}
+ const page='<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+reportEscape(title)+'</title><style>*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#17212b;margin:0;padding:34px;font-size:11px}h1{font-size:22px;margin:0 0 5px}h2{font-size:13px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.7px}.meta,.muted{color:#687783}.meta{font-size:10px;margin-bottom:22px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 20px}.metric{border:1px solid #d8e0e5;border-radius:7px;padding:10px}.metric span{display:block;color:#687783;font-size:9px;text-transform:uppercase}.metric strong{display:block;font-size:16px;margin-top:5px}table{width:100%;border-collapse:collapse;margin:8px 0 16px}th,td{padding:7px 8px;border-bottom:1px solid #e1e7eb;text-align:left}th{background:#f2f5f7;font-size:9px;text-transform:uppercase;color:#53616c}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}.total td{font-weight:700;border-top:1px solid #9baab4}.contract{border:1px solid #d8e0e5;border-radius:8px;padding:12px;margin:12px 0;break-inside:avoid}.contract-head{display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:12px;margin-bottom:7px}.footer{border-top:1px solid #d8e0e5;margin-top:26px;padding-top:8px;color:#687783;font-size:9px}.toolbar{position:sticky;top:0;background:#fff;padding:10px 0 14px;border-bottom:1px solid #ddd;margin-bottom:20px}.toolbar button{padding:9px 14px;border:0;border-radius:5px;background:#17212b;color:white;font-weight:700;margin-right:8px}@page{size:A4;margin:14mm}@media print{body{padding:0}.toolbar{display:none}.contract{break-inside:avoid}}</style></head><body><div class="toolbar"><button onclick="window.print()">SAVE AS PDF / PRINT</button><button onclick="window.close()">CLOSE</button></div>'+body+'<div class="footer">Salary Tracker • Generated '+reportEscape(new Date().toLocaleString())+' • Amounts in USD</div></body></html>';
+ win.document.open();win.document.write(page);win.document.close();
+}
+function contractReportMarkup(item,index){
+ const months=Array.isArray(item.months)?item.months:[],gross=Number(item.grossTotal??((Number(item.total)||0)+(Number(item.monthlyExpenses)||0)))||0,expenses=Number(item.monthlyExpenses)||0,net=historyNetValue(item);
+ const rows=[["Travel to vessel",item.travel],["Basic Salary",item.basic??item.contractOnboard],["Overtime",item.overtime],["WOA",item.woa],["Bonus",item.bonus],["Travel expenses reimbursed",item.travelExpense]];
+ let detail=rows.map(([name,value])=>"<tr><td>"+name+"</td><td class='num'>"+reportMoney(value)+"</td></tr>").join("");
+ let monthHtml=months.map(m=>{
+  const mg=Number(m.total)||0,me=Number(m.monthlyExpenses)||0,mn=Number(m.netTotal??Math.max(0,mg-me))||0;
+  const items=[["Travel",m.travel],["Basic Salary",m.basic],["Overtime",m.overtime],["WOA",m.woa],["Bonus",m.bonus],["Travel expenses reimbursed",m.expense],["Slop Chest",-Number(m.slopChest||0)],["Internet",-Number(m.internet||0)],["Cash Advance",-Number(m.cashAdvance||0)]];
+  return "<h2>"+reportEscape(m.label||m.key||"Monthly details")+"</h2><table><thead><tr><th>Item</th><th class='num'>Amount</th></tr></thead><tbody>"+items.map(([n,v])=>"<tr><td>"+n+"</td><td class='num'>"+reportMoney(v)+"</td></tr>").join("")+"<tr class='total'><td>Gross month total</td><td class='num'>"+reportMoney(mg)+"</td></tr><tr class='total'><td>Monthly expenses</td><td class='num'>-"+reportMoney(me)+"</td></tr><tr class='total'><td>Net month earnings</td><td class='num'>"+reportMoney(mn)+"</td></tr></tbody></table>";
+ }).join("");
+ return "<h1>Contract Earnings Report</h1><div class='meta'>Contract #"+(index+1)+" • "+reportEscape(item.start||"—")+" to "+reportEscape(item.signoff||"—")+" • Planned end: "+reportEscape(item.end||"—")+"</div><div class='summary'><div class='metric'><span>Gross earnings</span><strong>"+reportMoney(gross)+"</strong></div><div class='metric'><span>Monthly expenses</span><strong>-"+reportMoney(expenses)+"</strong></div><div class='metric'><span>Net earnings</span><strong>"+reportMoney(net)+"</strong></div></div><h2>Contract breakdown</h2><table><thead><tr><th>Item</th><th class='num'>Amount</th></tr></thead><tbody>"+detail+"<tr class='total'><td>Gross contract earnings</td><td class='num'>"+reportMoney(gross)+"</td></tr><tr class='total'><td>Monthly expenses</td><td class='num'>-"+reportMoney(expenses)+"</td></tr><tr class='total'><td>Net contract earnings</td><td class='num'>"+reportMoney(net)+"</td></tr></tbody></table>"+(monthHtml?"<h2>Monthly breakdown</h2>"+monthHtml:"<p class='muted'>Monthly breakdown is not available for this archived contract.</p>");
+}
+function exportContractPdf(index){const history=getHistory(),item=history[index];if(!item){alert("Contract not found in History.");return;}openPdfReport("Contract earnings report",contractReportMarkup(item,index));}
+function exportAllHistoryPdf(){
+ const history=getHistory();if(!history.length){alert("There are no completed contracts in History.");return;}
+ const total=history.reduce((sum,item)=>sum+historyNetValue(item),0);
+ const cards=history.slice().reverse().map((item,i)=>{const index=history.length-1-i,gross=Number(item.grossTotal??((Number(item.total)||0)+(Number(item.monthlyExpenses)||0)))||0;return "<div class='contract'><div class='contract-head'><span>Contract #"+(index+1)+" • "+reportEscape(item.start||"—")+" → "+reportEscape(item.signoff||"—")+"</span><span>"+reportMoney(historyNetValue(item))+"</span></div><table><tbody><tr><td>Gross earnings</td><td class='num'>"+reportMoney(gross)+"</td></tr><tr><td>Monthly expenses</td><td class='num'>-"+reportMoney(item.monthlyExpenses||0)+"</td></tr><tr class='total'><td>Net earnings</td><td class='num'>"+reportMoney(historyNetValue(item))+"</td></tr></tbody></table></div>";}).join("");
+ const body="<h1>Salary Tracker • History Report</h1><div class='meta'>Completed contracts: "+history.length+"</div><div class='summary'><div class='metric'><span>Total contracts</span><strong>"+history.length+"</strong></div><div class='metric'><span>All-Time Net Earnings</span><strong>"+reportMoney(total)+"</strong></div><div class='metric'><span>Currency</span><strong>USD</strong></div></div><h2>Contract summary</h2>"+cards;
+ openPdfReport("Salary Tracker History Report",body);
+}
+
 function renderHistory(){
  const history=getHistory();
  renderAllTime();
@@ -1336,7 +1364,7 @@ function renderHistory(){
          <div class="history-month-line total"><span>Net month earnings</span><span>${fmtUSD(month.netTotal ?? Math.max(0,(month.total||0)-(month.monthlyExpenses||0)))}</span></div>
         </div>
        </div>`).join("")}</div>`:""}
-      <div class="history-delete-row"><button type="button" class="history-delete-btn" data-delete-history="${historyIndex}">DELETE CONTRACT</button></div>
+      <div class="history-actions"><button type="button" class="secondary" data-pdf-history="${historyIndex}">EXPORT CONTRACT PDF</button><button type="button" class="history-delete-btn" data-delete-history="${historyIndex}">DELETE CONTRACT</button></div>
      </div>
     </details>`;
  }).join("");
@@ -2222,6 +2250,8 @@ async function importHistoryBackup(file,mode){
   renderHistory();alert(`Backup merged: ${additions.length} contracts added.`);
  }catch(error){console.error("History backup import failed",error);alert(error.message||"Could not read this backup file.");}
 }
+$("pdfAllHistoryBtn").addEventListener("click",exportAllHistoryPdf);
+$("historyList").addEventListener("click",event=>{const button=event.target.closest("[data-pdf-history]");if(!button)return;event.preventDefault();event.stopPropagation();exportContractPdf(Number(button.dataset.pdfHistory));});
 $("backupHistoryBtn").addEventListener("click",exportHistoryBackup);
 $("restoreHistoryBtn").addEventListener("click",()=>requestHistoryImport("replace"));
 $("mergeHistoryBtn").addEventListener("click",()=>requestHistoryImport("merge"));
@@ -2282,7 +2312,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.14.5 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.14.6 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
