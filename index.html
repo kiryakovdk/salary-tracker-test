@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.14.2</title>
+<title>Salary Tracker v0.14.3</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -458,6 +458,10 @@ input:focus{
 
 
 .history-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.history-complete-action{margin:0 0 14px;padding:12px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(255,255,255,.025)}
+.history-complete-action button{width:100%;min-height:44px;background:linear-gradient(145deg,#54e39a,#1fc477);color:#06110b;font-weight:800;letter-spacing:.4px}
+.history-complete-action button:disabled{background:rgba(255,255,255,.08);color:#74818a;border:1px solid rgba(255,255,255,.08);cursor:not-allowed}
+.history-complete-action .small{margin-top:7px;text-align:center}
 .history-item-rich{margin-bottom:10px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.025);overflow:hidden}
 .history-item-rich summary{list-style:none;cursor:pointer;padding:13px 14px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 .history-item-rich summary::-webkit-details-marker{display:none}
@@ -803,6 +807,10 @@ body {
 
 <div class="card screen-card screen-history" id="historyCard">
  <div class="section-title">CONTRACT HISTORY</div>
+ <div class="history-complete-action">
+  <button id="completeContractBtn" type="button" disabled>CONTRACT COMPLETED</button>
+  <div class="small" id="completeContractHint">Fill in Actual Sign Off to save this contract.</div>
+ </div>
  <div id="historyList"><div class="small">No completed contracts yet.</div></div>
  <div class="row" style="margin-top:12px"><span>Total contracts</span><span id="historyCount">0</span></div>
  <div class="row"><span>Total earned</span><span id="historyTotal">$0.00</span></div>
@@ -1335,12 +1343,25 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
   return Math.max(0,total);
 }
 
+function updateCompleteContractButton(start,end,signoff,salary){
+  const button=$("completeContractBtn"),hint=$("completeContractHint");
+  if(!button)return;
+  button.disabled=!signoff;
+  button.textContent="CONTRACT COMPLETED";
+  if(!signoff){hint.textContent="Fill in Actual Sign Off to save this contract.";return;}
+  if(!start||!end){hint.textContent="Add Contract Start and Contract End to enable saving.";return;}
+  const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
+  const alreadySaved=getHistory().some(item=>item.key===key);
+  button.disabled=alreadySaved;
+  button.textContent=alreadySaved?"CONTRACT SAVED":"CONTRACT COMPLETED";
+  hint.textContent=alreadySaved?"This contract is already saved in History.":"Tap to save the complete contract to History.";
+}
 function archiveCompletedContract(start,end,signoff,salary){
-  // Actual Sign Off closes the contract even when it is earlier than the
-  // planned Contract End. Archive only after the sign-off date has arrived.
-  const today=new Date();
-  today.setHours(23,59,59,999);
-  if(!start||!end||!signoff||signoff>today)return;
+  // Manual archive: Actual Sign Off closes the contract even when it is
+  // earlier than the planned Contract End.
+  if(!start||!end||!signoff)return;
+  const today=new Date();today.setHours(23,59,59,999);
+  if(signoff>today){alert("Actual Sign Off date has not arrived yet.");return;}
 
  const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
  const history=getHistory();
@@ -1963,8 +1984,7 @@ function update(){
 
  let earnings=earningsAtDate(now,start,end,signoff,now,salary);
  let overtimeEarned=updateOvertime(end,signoff,now,salary,start);
- archiveCompletedContract(start,end,signoff,salary);
-
+  updateCompleteContractButton(start,end,signoff,salary);
  renderContractMonths(now,start,end,signoff,travelStart,salary,basicWageNow,getTravelExpenses());
 
  // The large headline and the breakdown use exactly the same components.
@@ -2147,6 +2167,14 @@ bonusInput.addEventListener("blur",()=>{
  el.addEventListener("input",()=>{el.value=el.value.replace(/\D/g,"");setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":(id==="monthInternet"?"internet":"cashAdvance"),el.value||0);});
  el.addEventListener("blur",()=>{el.value=String(Math.round(Number(el.value)||0));setMonthExpense(contractMonthSelectedKey,id==="monthSlopChest"?"slopChest":(id==="monthInternet"?"internet":"cashAdvance"),el.value);update();});
 });
+$("completeContractBtn").addEventListener("click",()=>{
+ const start=getDate("start"),end=getDate("end"),signoff=getDate("signoff");
+ const salary=Math.max(0,parseFloat($("salary").value)||0);
+ if(!signoff){update();return;}
+ if(!start||!end){alert("Please fill in Contract Start and Contract End first.");return;}
+ archiveCompletedContract(start,end,signoff,salary);
+ update();
+});
 $("reset").onclick=()=>{localStorage.removeItem("salaryTracker");localStorage.removeItem("salaryTrackerEarningsGoal");localStorage.removeItem(MONTHLY_EXPENSES_KEY);localStorage.removeItem(MONTHLY_BONUSES_KEY);localStorage.removeItem(WOA_WAGE_KEY);$("earningsGoal").value="";$("travelStart").value="";$("woaBasicWage").value="";$("travelExpenses").value="";initDates();$("salary").value=5100;update()};
 $("nowEnd").onclick=()=>{let d=getDate("start")||new Date();d=new Date(d);d.setMonth(d.getMonth()+4);$("end").value=localInput(d);$("signoff").value=localInput(d);update()};
 $("nowForecast").onclick=()=>{let d=new Date();d.setDate(d.getDate()+30);$("forecast").value=localInput(d);update()};
@@ -2182,7 +2210,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.14.2 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.14.3 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
