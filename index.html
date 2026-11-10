@@ -2213,8 +2213,9 @@ async function importHistoryBackup(file,mode){
    if(!saveHistory(incoming))throw new Error("Could not save restored History. Existing data was not changed.");
    renderHistory();alert(`History restored: ${incoming.length} contracts.`);return;
   }
-  const seen=new Set(current.map(item=>JSON.stringify(item)));
-  const additions=incoming.filter(item=>{const key=JSON.stringify(item);if(seen.has(key))return false;seen.add(key);return true;});
+  const identity=item=>item.key||([item.start,item.end,item.signoff,item.salary].some(value=>value!==undefined)?[item.start||"",item.end||"",item.signoff||"",item.salary??""].join("|"):JSON.stringify(item));
+  const seen=new Set(current.map(identity));
+  const additions=incoming.filter(item=>{const key=identity(item);if(seen.has(key))return false;seen.add(key);return true;});
   if(!additions.length){alert("No new contracts found. History is already up to date.");return;}
   if(!confirm(`Add ${additions.length} new contracts to the current History? Existing contracts will be kept.`))return;
   if(!saveHistory(current.concat(additions)))throw new Error("Could not merge the backup. Existing data was not changed.");
