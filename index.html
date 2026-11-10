@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Salary Tracker v0.14.1</title>
+<title>Salary Tracker v0.14.2</title>
 <style>
 :root{
   --bg:#070a0d;--panel:#10151a;--panel2:#0b1014;--line:#202930;
@@ -1144,6 +1144,15 @@ async function loadRates(){
 }
 function updateOvertime(end,signoff,now,salary,payStart){
  const card=$("overtimeCard");
+ if(end&&signoff&&signoff<end){
+  card.classList.add("inactive");card.classList.remove("active");
+  $("overtimeStatus").textContent="SIGNED OFF BEFORE CONTRACT END • NO OVERTIME";
+  $("overtimeTime").textContent="0d 00:00:00";
+  $("overtimeEarn").textContent="$0.00";
+  $("overtimeDay").textContent="$0.00";
+  $("overtimeHour").textContent="$0.00";
+  return 0;
+ }
  if(!end || now<=end){
   card.classList.add("inactive"); card.classList.remove("active");
   $("overtimeStatus").textContent=end?"Overtime starts after contract end":"Set contract end";
@@ -1327,21 +1336,27 @@ function getWoaEarnedForPeriod(periodStart,periodEnd){
 }
 
 function archiveCompletedContract(start,end,signoff,salary){
-  if(!start||!end||!signoff||signoff<end||signoff>new Date())return;
+  // Actual Sign Off closes the contract even when it is earlier than the
+  // planned Contract End. Archive only after the sign-off date has arrived.
+  const today=new Date();
+  today.setHours(23,59,59,999);
+  if(!start||!end||!signoff||signoff>today)return;
 
  const key=[start.getTime(),end.getTime(),signoff.getTime(),salary].join("|");
  const history=getHistory();
  if(history.some(x=>x.key===key))return;
 
+ const actualEnd=minDate(end,signoff);
  const basicWage=parseFloat($("woaBasicWage")?.value)||0;
- const contractOnboard=totalPaidContract(start,end,salary);
+ const contractOnboard=totalPaidContract(start,actualEnd,salary);
  const travelStart=getTravelStart();
  const travel=travelStart && travelStart<start
    ? travelEarnedBetween(travelStart,start,basicWage,start)
    : 0;
  const travelExpense=getTravelExpenses();
  const contract=contractOnboard+travel+travelExpense;
- const overtime=paidAmountBetween(end,signoff,salary,start);
+ // No overtime is payable when sign-off is before the planned Contract End.
+ const overtime=signoff>end?paidAmountBetween(end,signoff,salary,start):0;
  const woa=getWoaEarnedForPeriod(start,signoff);
  const months=typeof buildContractMonths==="function"
    ? buildContractMonths(signoff,start,end,signoff,travelStart,salary,basicWage,travelExpense)
@@ -1364,7 +1379,7 @@ function archiveCompletedContract(start,end,signoff,salary){
    overtime,
    woa,
    bonus,
-   overtimeTime:fmtDuration((signoff-end)/1000),
+   overtimeTime:fmtDuration(Math.max(0,(signoff-end)/1000)),
    months,
    monthlyExpenses,
    grossTotal,
@@ -1975,18 +1990,19 @@ function update(){
   $("signoffStatus").textContent=signoff?signoff.toLocaleDateString("en-US"):"Not specified";
  }
  if(end&&start){
-  let all=(end-start)/1000, done=Math.max(0,Math.min(all,(now-start)/1000));
-  let pct=all>0?done/all*100:0;
+  const effectiveEnd=signoff&&signoff<end?signoff:end;
+  let all=(effectiveEnd-start)/1000, done=Math.max(0,Math.min(all,(now-start)/1000));
+  let pct=all>0?done/all*100:100;
   $("bar").style.width=Math.min(100,pct)+"%";
   $("progressText").textContent=pct.toFixed(1)+"%";
-  $("remaining").innerHTML=now<end?"Remaining: "+fmtDurationHTML((end-now)/1000,true):"Contract completed";
+  $("remaining").innerHTML=now<effectiveEnd?"Remaining: "+fmtDurationHTML((effectiveEnd-now)/1000,true):"Contract completed";
   {
     const bw=parseFloat($("woaBasicWage")?.value)||0;
     const travelPart=travelStart&&start&&travelStart<start ? travelEarnedBetween(travelStart,start,bw,start) : 0;
-    const onboardPart=end?totalPaidContract(start,end,salary):0;
+    const onboardPart=totalPaidContract(start,effectiveEnd,salary);
     const travelExpense=getTravelExpenses();
     const bonusFrom=(travelStart&&start&&travelStart<start)?travelStart:start;
-    const bonusTotal=bonusFrom&&end?monthlyBonusTotalBetween(bonusFrom,end):0;
+    const bonusTotal=bonusFrom?monthlyBonusTotalBetween(bonusFrom,effectiveEnd):0;
     $("contractTotal").textContent=fmtUSD(Math.max(0,travelPart+onboardPart+travelExpense+bonusTotal));
   }
  }
@@ -2166,7 +2182,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  setScreen("home");
 });
 </script>
-<div class="app-version">Salary Tracker • v0.14.1 • Build 2026-11-10</div>
+<div class="app-version">Salary Tracker • v0.14.2 • Build 2026-11-10</div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
  <div class="bottom-nav-inner">
